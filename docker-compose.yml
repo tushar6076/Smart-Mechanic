@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: smart-mechanic-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-tushar}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password123}
+      POSTGRES_DB: ${DB_NAME:-smartmechanic}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-mechanic-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-tushar}:${DB_PASSWORD:-password123}@db:5432/${DB_NAME:-smartmechanic}?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

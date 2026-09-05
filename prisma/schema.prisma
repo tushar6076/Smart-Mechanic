@@ -1,0 +1,277 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  // url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS & TYPES
+// ==========================================
+enum UserRole {
+  CUSTOMER
+  WORKER
+  ADMIN
+}
+
+enum WorkerStatus {
+  PENDING_VERIFICATION
+  INTERVIEW_SCHEDULED
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum IdProofType {
+  AADHAAR
+  DRIVERS_LICENSE
+  PASSPORT
+  VOTER_ID
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PLACED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+// ==========================================
+// 1. AUTH & USER PROFILES
+// ==========================================
+model User {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  password   String
+  name       String
+  phone      String?   @unique
+  profilePic String?   // Added for avatar / dashboard personalization
+  address    String?   // Added for tool delivery and service location tracking
+  role       UserRole  @default(CUSTOMER)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  workerProfile     Worker?  
+  appointments      Appointment[]
+  payments          Payment[]          // User directly owns transactions
+  wishlist          Wishlist[]
+  cartItems         Cart[]
+  reviews           Review[]           // A user can submit feedback across the platform
+}
+
+model Worker {
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Professional Specs (Filled in Layer 4)
+  experience    Int          
+  baseRate      Float        @default(0.0) 
+  dob           DateTime?    // Captures the structural Date of Birth metric
+  
+  // Custom fallback option for skills/services not listed in the global catalog
+  customSkills  String?      // Captures the "Others" option text input
+  
+  // Vetting & Compliance Layer
+  idProofType   IdProofType? // Strict database-level option selection tracking
+  idProofNumber String?      // Secure ID alphanumeric token string representation
+  idProofUrl    String?      // Structural file upload bucket address destination link
+  status        WorkerStatus @default(PENDING_VERIFICATION)
+  
+  // Admin Back-Office Fields
+  adminNotes    String?      
+  meetingLink   String?      
+
+  // Relations
+  services      Service[]    @relation("WorkerServices") 
+  jobs          Appointment[] @relation("WorkerJobs")
+  reviews       Review[]      
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "ECU Diagnostics & Tuning"
+  description String
+  category    String   // e.g., "Electrical", "Engine", "Brakes"
+  basePrice   Float    @default(0.0)
+  imageUrl    String?
+
+  // Relations
+  workers     Worker[] @relation("WorkerServices") // Tracks back to all capable engineers
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==========================================
+// 3. TRANSACTION & BILLING LAYER
+// ==========================================
+model Payment {
+  id                String        @id @default(cuid())
+  status            PaymentStatus @default(PENDING)
+  amount            Float
+  currency          String        @default("INR")
+  
+  // Razorpay Gateway integration fields
+  razorpayOrderId   String        @unique 
+  razorpayPaymentId String?       @unique 
+  razorpaySignature String?
+
+  // The Payment record holds the single source of truth for who paid
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+
+  // Relations linking back from purchases
+  orders            Order[]       // Many orders can map to one payment id
+  appointments      Appointment[] // Appointment paid for under this transaction
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+// ==========================================
+// 4. APPOINTMENTS & SERVICES
+// ==========================================
+model Appointment {
+  id          String            @id @default(cuid())
+  status      AppointmentStatus @default(PENDING)
+  scheduledAt DateTime
+  notes       String?
+  totalPrice  Float             
+  
+  customerId  String
+  customer    User              @relation(fields: [customerId], references: [id])
+  
+  workerId    String?
+  worker      Worker?           @relation("WorkerJobs", fields: [workerId], references: [id])
+
+  // Optional link to Payment (Populated once payment passes gateway check)
+  paymentId   String?
+  payment     Payment?          @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+// ==========================================
+// 5. E-COMMERCE & SHOPPING CART
+// ==========================================
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  stock       Int      @default(0)
+  category    String   
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  orders      Order[]
+  wishlists   Wishlist[]
+  cartItems   Cart[]
+  reviews     Review[] // Aggregated item performance markers
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  status    OrderStatus @default(PENDING_PAYMENT)
+  amount    Float       // Calculated cost for this single row (quantity * price)
+  quantity  Int         @default(1)
+  
+  productId String
+  product   Product     @relation(fields: [productId], references: [id])
+
+  // 🧹 Traceable without redundancy: We find the user through payment -> user
+  paymentId String
+  payment   Payment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  quantity  Int      @default(1)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId]) // Keeps database clean if user adds same tool multiple times
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+// ==========================================
+// 6. REVIEWS & FEEDBACK LAYER
+// ==========================================
+model Review {
+  id          String   @id @default(cuid())
+  rating      Int      // Value between 1 and 5
+  comment     String?
+  
+  // Creator Node
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Target Variant 1: Product Review
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Target Variant 2: Worker Review
+  workerId    String?
+  worker      Worker?  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Database-level guardrails: Prevents a user from spamming multiple records on the same node
+  @@unique([userId, productId])
+  @@unique([userId, workerId])
+}

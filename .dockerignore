@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.env
+prisma/migrations
+src/generated
+dist
+build
+README.md
+Dockerfile
+docker-compose.yml
