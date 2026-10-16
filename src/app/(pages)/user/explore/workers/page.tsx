@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { 
-  Users, Search, Star, MapPin, 
-  Briefcase, ArrowRight, ShieldCheck, Activity 
+  Search, Star,
+  ArrowRight, ShieldCheck, Activity
 } from "lucide-react";
 
 interface WorkerCatalogItem {
@@ -22,7 +22,7 @@ interface WorkerCatalogItem {
   reviews: { rating: number }[];
 }
 
-export default function ExploreWorkersCatalog() {
+function ExploreWorkersCatalogContent() {
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q") || "";
 
@@ -35,10 +35,11 @@ export default function ExploreWorkersCatalog() {
       try {
         const res = await fetch("/api/public/explore/workers");
         if (res.ok) {
-          const data = await res.json();
+          const data: { workers?: WorkerCatalogItem[] } = await res.json();
           // Filter out suspended or unapproved records natively
-          setWorkers((data.workers || []).filter((w: any) => w.status === "APPROVED"));
+          setWorkers((data.workers || []).filter((worker) => worker.status === "APPROVED"));
         }
+
       } catch (err) {
         console.error("Failed loading worker index:", err);
       } finally {
@@ -86,7 +87,7 @@ export default function ExploreWorkersCatalog() {
                       <span className="text-xs font-black uppercase text-zinc-200 tracking-wide">{worker.user.name}</span>
                       <ShieldCheck size={13} className="text-primary" />
                     </div>
-                    <span className="text-[10px] text-zinc-500 font-mono block mt-1">{worker.user.address || "Chhattisgarh Base"}</span>
+                    <span className="text-label text-zinc-500 font-mono block mt-1">{worker.user.address || "Chhattisgarh Base"}</span>
                   </div>
                   <div className="flex items-center gap-1 text-amber-500 text-xs font-black bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">
                     <Star size={11} className="fill-current" /> 5.0
@@ -95,17 +96,17 @@ export default function ExploreWorkersCatalog() {
 
                 <div className="flex flex-wrap gap-1 mt-4">
                   {worker.services.map(s => (
-                    <span key={s.id} className="bg-zinc-900 border border-zinc-800 px-2 py-0.5 text-[9px] font-bold text-zinc-400 uppercase rounded">{s.name}</span>
+                    <span key={s.id} className="bg-zinc-900 border border-zinc-800 px-2 py-0.5 text-micro font-bold text-zinc-400 uppercase rounded">{s.name}</span>
                   ))}
                 </div>
               </div>
 
               <div className="flex items-center justify-between border-t border-zinc-900 pt-4 mt-6">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Base Deployment</span>
+                  <span className="text-micro font-black uppercase tracking-widest text-zinc-600">Base Deployment</span>
                   <span className="text-xs font-black text-white mt-0.5">₹{worker.baseRate.toFixed(2)}/hr</span>
                 </div>
-                <Link href={`/user/appointment?workerId=${worker.id}`} className="text-[10px] font-black uppercase tracking-widest bg-zinc-900 border border-zinc-800 text-zinc-300 group-hover:border-primary px-3 py-2 rounded-lg flex items-center gap-1 transition-all">
+                <Link href={`/user/appointment?workerId=${worker.id}`} className="text-label font-black uppercase tracking-widest bg-zinc-900 border border-zinc-800 text-zinc-300 group-hover:border-primary px-3 py-2 rounded-lg flex items-center gap-1 transition-all">
                   Book Slot <ArrowRight size={11} />
                 </Link>
               </div>
@@ -115,5 +116,13 @@ export default function ExploreWorkersCatalog() {
 
       </div>
     </div>
+  );
+}
+
+export default function ExploreWorkersCatalog() {
+  return (
+    <Suspense fallback={<div className="flex h-[50vh] items-center justify-center bg-zinc-950 text-zinc-500">Loading mechanics…</div>}>
+      <ExploreWorkersCatalogContent />
+    </Suspense>
   );
 }

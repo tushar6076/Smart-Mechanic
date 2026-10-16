@@ -82,7 +82,7 @@ export default function WorkerProfileDynamicPage({ params }: WorkerPageProps) {
         {/* DISMISS BACK-LINK POINTER */}
         <Link 
           href="/user/explore/workers" 
-          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors w-fit"
+          className="flex items-center gap-2 text-label font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors w-fit"
         >
           <ArrowLeft size={12} /> Return to Engineering Rosters
         </Link>
@@ -104,7 +104,7 @@ export default function WorkerProfileDynamicPage({ params }: WorkerPageProps) {
                 <h1 className="text-lg font-black text-white uppercase tracking-tight">{worker.user.name}</h1>
                 <ShieldCheck size={15} className="text-primary" />
               </div>
-              <div className="flex items-center gap-3 text-[11px] text-zinc-500 uppercase tracking-wider font-bold">
+              <div className="flex items-center gap-3 text-control text-zinc-500 uppercase tracking-wider font-bold">
                 <span className="flex items-center gap-1"><Briefcase size={12} /> {worker.experience} Years Active</span>
                 <span className="flex items-center gap-1"><MapPin size={11} /> {worker.user.address || "Zone Unassigned"}</span>
               </div>
@@ -113,9 +113,9 @@ export default function WorkerProfileDynamicPage({ params }: WorkerPageProps) {
 
           {/* BASE DEPLOYMENT RATE MATRIX BOX */}
           <div className="border-t sm:border-t-0 sm:border-l border-zinc-900 pt-4 sm:pt-0 sm:pl-6 flex flex-col items-start sm:items-end justify-center shrink-0">
-            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Operational Value</span>
+            <span className="text-micro font-black uppercase tracking-widest text-zinc-600">Operational Value</span>
             <span className="text-xl font-black text-white mt-0.5">₹{worker.baseRate.toFixed(2)}/hr</span>
-            <div className="flex items-center gap-1 text-amber-500 text-[10px] font-black mt-1 uppercase tracking-wide bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">
+            <div className="flex items-center gap-1 text-amber-500 text-label font-black mt-1 uppercase tracking-wide bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">
               <Star size={11} className="fill-current" /> 5.0 Core Index
             </div>
           </div>
@@ -133,8 +133,8 @@ export default function WorkerProfileDynamicPage({ params }: WorkerPageProps) {
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {worker.services.map((svc) => (
                   <div key={svc.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 flex flex-col gap-0.5 text-left w-full sm:w-[48%]">
-                    <span className="text-[11px] font-black uppercase text-zinc-300 tracking-wide">{svc.name}</span>
-                    <span className="text-[9px] font-mono text-zinc-600 uppercase mt-0.5">CAT: ${svc.category}</span>
+                    <span className="text-control font-black uppercase text-zinc-300 tracking-wide">{svc.name}</span>
+                    <span className="text-micro font-mono text-zinc-600 uppercase mt-0.5">CAT: ${svc.category}</span>
                   </div>
                 ))}
               </div>
@@ -143,7 +143,7 @@ export default function WorkerProfileDynamicPage({ params }: WorkerPageProps) {
             {/* SECONDARY CUSTOM FALLBACK SKILLS DISPLAY CONTAINER */}
             {worker.customSkills && (
               <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 flex flex-col gap-2">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">// UNLISTED FIELD COMPETENCIES EXTENSIONS</h4>
+                <h4 className="text-label font-black uppercase tracking-widest text-zinc-500">// UNLISTED FIELD COMPETENCIES EXTENSIONS</h4>
                 <p className="text-xs text-zinc-400 font-mono italic leading-relaxed">
                   "{worker.customSkills}"
                 </p>
@@ -157,7 +157,7 @@ export default function WorkerProfileDynamicPage({ params }: WorkerPageProps) {
               <h4 className="text-xs font-black uppercase tracking-widest text-zinc-200 flex items-center gap-1.5">
                 <Calendar size={13} className="text-primary" /> Deployment Action
               </h4>
-              <p className="text-[11px] text-zinc-500 mt-1 leading-normal">
+              <p className="text-control text-zinc-500 mt-1 leading-normal">
                 Initialize a physical diagnostic request log routing directly to this technician.
               </p>
             </div>

@@ -46,8 +46,12 @@ export default function LoginPage() {
         router.push("/user");
       }
 
-    } catch (err: any) {
-      setErrorMessage(err.message || "System error connecting to auth server.");
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error && err.message
+          ? err.message
+          : "System error connecting to auth server."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +60,7 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-400 font-sans px-4 select-none">
       {/* Background Matrix Fabrics */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f23_1px,transparent_1px),linear-gradient(to_bottom,#1f1f23_1px,transparent_1px)] bg-[size:3rem_3rem] opacity-20" />
+      <div className="app-grid-overlay absolute inset-0 opacity-20" />
       
       <div className="relative w-full max-w-md rounded-2xl border border-zinc-900 bg-zinc-950 p-6 sm:p-8 shadow-2xl shadow-black/80">
         
@@ -66,14 +70,14 @@ export default function LoginPage() {
             <Wrench size={18} className="rotate-45" />
           </div>
           <h1 className="text-xl font-black uppercase tracking-tighter text-white italic">
-            SMART<span className="text-primary">MECHANIC</span> // SECURE AUTH
+            SMART<span className="text-primary">MECHANIC</span> | SECURE AUTH
           </h1>
           <p className="text-xs text-zinc-500">Access your integrated field service and tools command workspace.</p>
         </div>
 
         {/* Error notification node */}
         {errorMessage && (
-          <div className="mb-4 rounded-xl border border-red-950/40 bg-red-950/10 p-3 text-[11px] font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
+          <div className="mb-4 rounded-xl border border-red-950/40 bg-red-950/10 p-3 text-control font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
             <ShieldCheck size={14} className="shrink-0 animate-pulse" /> {errorMessage}
           </div>
         )}
@@ -81,7 +85,7 @@ export default function LoginPage() {
         <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
           {/* Email block */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Email Vector Identifier</label>
+            <label className="text-label font-black uppercase tracking-widest text-zinc-500">Email Vector Identifier</label>
             <input 
               type="email"
               required
@@ -94,7 +98,7 @@ export default function LoginPage() {
 
           {/* Password block */}
           <div className="flex flex-col gap-1.5 relative">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Secure Cryptographic Token</label>
+            <label className="text-label font-black uppercase tracking-widest text-zinc-500">Secure Cryptographic Token</label>
             <div className="relative w-full">
               <input 
                 type={showPassword ? "text" : "password"}
@@ -128,8 +132,14 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div className="mt-4 text-right text-control font-bold">
+          <Link href="/auth/forgot" className="text-primary hover:text-red-400 transition-colors">
+            Forgot password?
+          </Link>
+        </div>
+
         {/* Alternate registration link mapping */}
-        <div className="mt-6 text-center text-[11px] font-bold tracking-wide border-t border-zinc-900 pt-4">
+        <div className="mt-6 text-center text-control font-bold tracking-wide border-t border-zinc-900 pt-4">
           <span className="text-zinc-600 uppercase">Unregistered Identifier Node? </span>
           <Link href="/auth/signup" className="text-primary hover:text-red-400 transition-colors uppercase ml-1">
             Initialize Core Registration &rarr;

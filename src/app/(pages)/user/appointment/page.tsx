@@ -23,7 +23,7 @@ function AppointmentFormCore() {
   const preselectedWorkerId = searchParams.get("workerId") || "";
 
   // 📝 Master Dynamic State Bindings
-  const [workerId, setWorkerId] = useState(preselectedWorkerId);
+  const workerId = preselectedWorkerId;
   const [vehicleType, setVehicleType] = useState("SEDAN");
   const [vehicleModel, setVehicleModel] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -40,7 +40,7 @@ function AppointmentFormCore() {
     if (preselectedWorkerId) {
       async function verifyWorkerProfileNode() {
         try {
-          const res = await fetch(`/api/public/explore-workers/${preselectedWorkerId}`);
+          const res = await fetch(`/api/public/explore/workers/${preselectedWorkerId}`);
           if (res.ok) {
             const data = await res.json();
             // Staging target metadata parameter dynamically
@@ -85,14 +85,13 @@ function AppointmentFormCore() {
       const result = await response.json();
 
       if (response.ok && result.appointmentId) {
-        // Handoff to status router node parameter
-        router.push(`/user/cart/payment/status?type=appointment&status=success&ref=${result.appointmentId}`);
+        router.push(`/user/appointment/${result.appointmentId}`);
       } else {
-        router.push(`/user/cart/payment/status?type=appointment&status=failed`);
+        setErrorMessage(response.status === 401 ? "Sign in to schedule an appointment." : result.error || "Unable to schedule this appointment.");
       }
     } catch (err) {
       console.error("Scheduler communications timeout event:", err);
-      router.push(`/user/cart/payment/status?type=appointment&status=failed`);
+      setErrorMessage("Unable to reach the appointment service. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -102,22 +101,22 @@ function AppointmentFormCore() {
     <div className="min-h-screen bg-zinc-950 text-zinc-400 font-sans pb-20 pt-8">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
         
-        <Link href="/user/explore/workers" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors w-fit">
+        <Link href="/user/explore/workers" className="flex items-center gap-2 text-label font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors w-fit">
           <ArrowLeft size={12} /> Return to Engineering Rosters
         </Link>
 
         {/* METRIC HEADER DISPLAY SYSTEM */}
         <div>
           <div className="flex items-center gap-2 text-primary text-xs font-black uppercase tracking-widest">
-            <Calendar size={14} /> // DISPATCH REQUEST ENGINE
+            <Calendar size={14} /> DISPATCH REQUEST ENGINE
           </div>
           <h1 className="text-xl font-black text-white uppercase mt-1 tracking-tight">LOGISTICS APPOINTMENT DISPATCHER</h1>
           <p className="text-xs text-zinc-500 mt-1">Submit mechanical parameters and target parameters to lock down localized field technicians.</p>
         </div>
 
         {errorMessage && (
-          <div className="rounded-xl border border-red-950/40 bg-red-950/10 p-3 text-[11px] font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
-            <AlertTriangle size={14} className="shrink-0 text-primary animate-pulse" /> {errorMessage}
+          <div className="rounded-xl border border-red-950/40 bg-red-950/10 p-3 text-control font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
+            <AlertTriangle size={14} className="shrink-0 text-primary animate-pulse" /> {errorMessage} {errorMessage.startsWith("Sign in") && <Link href="/auth/login" className="underline">Login</Link>}
           </div>
         )}
 
@@ -137,7 +136,7 @@ function AppointmentFormCore() {
           {/* ASSET METADATA ENTRY GRID */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
+              <label className="text-label font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
                 <Wrench size={12} /> Core Unit Matrix Class
               </label>
               <select
@@ -155,7 +154,7 @@ function AppointmentFormCore() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
+              <label className="text-label font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
                 <FileText size={11} /> Specific Model Blueprint
               </label>
               <input 
@@ -171,7 +170,7 @@ function AppointmentFormCore() {
 
           {/* WINDOW HORIZON PERIOD CHRONO */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
+            <label className="text-label font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
               <Clock size={12} /> Target Execution Period Window
             </label>
             <input 
@@ -186,7 +185,7 @@ function AppointmentFormCore() {
 
           {/* GEOLOCATION MATRIX */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
+            <label className="text-label font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
               <MapPin size={12} /> Physical Coordinates Destination Address
             </label>
             <input 
@@ -201,7 +200,7 @@ function AppointmentFormCore() {
 
           {/* SYMPTOM REPORTING LOGS AREA */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+            <label className="text-label font-black uppercase tracking-widest text-zinc-500">
               Symptom Description Statement Log
             </label>
             <textarea

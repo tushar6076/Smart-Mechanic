@@ -34,18 +34,19 @@ export default function UserCartManifestPage() {
   const [cartItems, setCartItems] = useState<CartLineItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isUpdatingId, setIsUpdatingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Sync active cart lines directly from current database context
   useEffect(() => {
     async function pullStagedManifest() {
       try {
         const res = await fetch("/api/user/cart");
-        if (res.ok) {
-          const data = await res.json();
-          setCartItems(data.items || []);
-        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(res.status === 401 ? "Sign in to view your cart." : data.error || "Cart could not be loaded.");
+        setCartItems(data.items || []);
       } catch (err) {
         console.error("Cart system query breakdown:", err);
+        setActionError(err instanceof Error ? err.message : "Cart could not be loaded.");
       } finally {
         setIsLoading(false);
       }
@@ -56,6 +57,7 @@ export default function UserCartManifestPage() {
   // ⚙️ Mutation Engine: Change line quantity tracking limits
   const handleModifyQuantity = async (itemId: string, newQty: number, maxStock: number) => {
     if (newQty < 1 || newQty > maxStock) return;
+    setActionError(null);
     setIsUpdatingId(itemId);
 
     try {
@@ -69,9 +71,13 @@ export default function UserCartManifestPage() {
         setCartItems(prev => prev.map(item => 
           item.id === itemId ? { ...item, quantity: newQty } : item
         ));
+      } else {
+        const data = await res.json();
+        setActionError(data.error || "Quantity could not be updated.");
       }
     } catch (err) {
       console.error("Failed adjusting system stock allocation weights:", err);
+      setActionError("Could not reach the cart service. Please try again.");
     } finally {
       setIsUpdatingId(null);
     }
@@ -79,6 +85,7 @@ export default function UserCartManifestPage() {
 
   // 🗑️ Mutation Engine: Hard-evict row from user relational cart table
   const handleEvictItem = async (itemId: string) => {
+    setActionError(null);
     setIsUpdatingId(itemId);
     try {
       const res = await fetch(`/api/user/cart/delete?itemId=${itemId}`, {
@@ -87,9 +94,13 @@ export default function UserCartManifestPage() {
 
       if (res.ok) {
         setCartItems(prev => prev.filter(item => item.id !== itemId));
+      } else {
+        const data = await res.json();
+        setActionError(data.error || "Item could not be removed.");
       }
     } catch (err) {
       console.error("Failed cascading database row delete sequence:", err);
+      setActionError("Could not reach the cart service. Please try again.");
     } finally {
       setIsUpdatingId(null);
     }
@@ -105,7 +116,7 @@ export default function UserCartManifestPage() {
       <div className="flex h-[60vh] w-full items-center justify-center bg-zinc-950">
         <div className="flex flex-col items-center gap-2">
           <Activity className="h-4 w-4 animate-spin text-primary" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-700">Recalculating Manifest Totals...</span>
+          <span className="text-label font-black uppercase tracking-widest text-zinc-700">Recalculating Manifest Totals...</span>
         </div>
       </div>
     );
@@ -114,11 +125,12 @@ export default function UserCartManifestPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-400 font-sans pb-20 pt-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col gap-8">
+        {actionError && <p role="alert" className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300">{actionError} {actionError.startsWith("Sign in") && <Link href="/auth/login" className="underline">Login</Link>}</p>}
         
         {/* MODULE HEADER BAR */}
         <div>
           <div className="flex items-center gap-2 text-primary text-xs font-black uppercase tracking-widest">
-            <ShoppingCart size={14} /> // PIPELINE ALLOCATION MATRIX
+            <ShoppingCart size={14} /> PIPELINE ALLOCATION MATRIX
           </div>
           <h1 className="text-xl font-black text-white uppercase mt-1 tracking-tight">STAGED PROCUREMENT MANIFEST</h1>
           <p className="text-xs text-zinc-500 mt-1">Audit active inventory selections and lock parameters prior to launching currency clearance routines.</p>
@@ -136,7 +148,7 @@ export default function UserCartManifestPage() {
             </div>
             <Link 
               href="/user/explore/products" 
-              className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-white border border-primary/20 bg-primary/5 px-4 py-2 rounded-xl mt-2 transition-all"
+              className="text-label font-black uppercase tracking-widest text-primary hover:text-white border border-primary/20 bg-primary/5 px-4 py-2 rounded-xl mt-2 transition-all"
             >
               Query Stock System Index
             </Link>
@@ -154,14 +166,14 @@ export default function UserCartManifestPage() {
                 >
                   {/* IMAGE & SPECIFICS CONTAINER */}
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="h-14 w-14 rounded-lg border border-zinc-800 bg-zinc-900 flex items-center justify-center font-mono text-[9px] text-zinc-700 shrink-0 overflow-hidden">
+                    <div className="h-14 w-14 rounded-lg border border-zinc-800 bg-zinc-900 flex items-center justify-center font-mono text-micro text-zinc-700 shrink-0 overflow-hidden">
                       {item.product.imageUrls?.[0] ? (
                         <img src={item.product.imageUrls[0]} alt={item.product.name} className="w-full h-full object-cover" />
                       ) : "TOOL_IMG"}
                     </div>
                     <div className="flex flex-col min-w-0">
                       <span className="text-xs font-black uppercase text-zinc-200 tracking-wide truncate">{item.product.name}</span>
-                      <span className="text-[10px] text-zinc-500 font-mono mt-0.5 uppercase tracking-wider">UNIT: ₹{item.product.price.toFixed(2)}</span>
+                      <span className="text-label text-zinc-500 font-mono mt-0.5 uppercase tracking-wider">UNIT: ₹{item.product.price.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -192,7 +204,7 @@ export default function UserCartManifestPage() {
 
                     {/* ROW INVOICE SCALE */}
                     <div className="flex flex-col items-end w-24">
-                      <span className="text-[11px] font-mono font-black text-white">
+                      <span className="text-control font-mono font-black text-white">
                         ₹{(item.product.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
@@ -230,13 +242,13 @@ export default function UserCartManifestPage() {
               </div>
 
               <div className="flex justify-between items-center py-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">AGGREGATE DEBIT</span>
+                <span className="text-label font-black uppercase tracking-widest text-zinc-500">AGGREGATE DEBIT</span>
                 <span className="text-base font-mono font-black text-white">₹{completeInvoiceTotal.toFixed(2)}</span>
               </div>
 
               {/* ROUTE PUSH FOR CLEARANCE TRIGGER */}
               <button
-                onClick={() => router.push("/user/cart/payment")}
+                onClick={() => router.push("/user/cart/order")}
                 className="w-full rounded-xl bg-primary hover:bg-red-600 text-white font-black uppercase text-xs tracking-widest py-3 mt-2 transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/10"
               >
                 Launch Checkout Sequence <ArrowRight size={13} />

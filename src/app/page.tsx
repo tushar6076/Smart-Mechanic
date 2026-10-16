@@ -41,7 +41,7 @@ export default function RootSessionProxyPage() {
     <div className="flex h-screen w-full flex-col items-center justify-center bg-zinc-950 text-zinc-400 font-sans select-none">
       <div className="flex flex-col items-center gap-2">
         <Activity className="h-5 w-5 animate-spin text-primary" />
-        <span className="text-[10px] font-mono font-black uppercase tracking-widest text-zinc-700">
+        <span className="text-label font-mono font-black uppercase tracking-widest text-zinc-700">
           Syncing Access Vectors...
         </span>
       </div>

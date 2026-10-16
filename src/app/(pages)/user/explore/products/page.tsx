@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Search, ShoppingCart, Tag, Filter, Activity, Check } from "lucide-react";
 
@@ -14,7 +15,7 @@ interface ProductCatalogItem {
   imageUrls: string[];
 }
 
-export default function ExploreProductsCatalog() {
+function ExploreProductsCatalogContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "ALL";
 
@@ -23,6 +24,7 @@ export default function ExploreProductsCatalog() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(initialCategory);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProducts() {
@@ -32,6 +34,7 @@ export default function ExploreProductsCatalog() {
           const data = await res.json();
           setProducts(data.products || []);
         }
+
       } catch (err) {
         console.error("Failed loading inventory models:", err);
       } finally {
@@ -42,6 +45,7 @@ export default function ExploreProductsCatalog() {
   }, []);
 
   const handleAddToCart = async (productId: string) => {
+    setCartError(null);
     try {
       const res = await fetch("/api/user/cart", {
         method: "POST",
@@ -52,9 +56,13 @@ export default function ExploreProductsCatalog() {
       if (res.ok) {
         setAddedProductId(productId);
         setTimeout(() => setAddedProductId(null), 2000);
+      } else {
+        const data = await res.json();
+        setCartError(res.status === 401 ? "Sign in to add products to your cart." : data.error || "Could not add this product.");
       }
     } catch (err) {
       console.error("Cart insertion transaction failure:", err);
+      setCartError("Could not reach the cart service. Please try again.");
     }
   };
 
@@ -75,6 +83,7 @@ export default function ExploreProductsCatalog() {
   return (
     <div className="bg-zinc-950 text-zinc-400 font-sans pb-20 pt-6">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
+        {cartError && <p role="alert" className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300">{cartError} {cartError.startsWith("Sign in") && <Link href="/auth/login" className="underline">Login</Link>}</p>}
         
         {/* FILTERS HUB */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl border border-zinc-900 bg-zinc-950/40">
@@ -110,7 +119,7 @@ export default function ExploreProductsCatalog() {
           {filteredProducts.map((product) => (
             <div key={product.id} className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-4 flex flex-col justify-between hover:border-zinc-800 transition-colors group">
               <div>
-                <div className="w-full aspect-square bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center text-zinc-700 uppercase font-mono text-[10px] tracking-widest relative overflow-hidden">
+                <div className="w-full aspect-square bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center text-zinc-700 uppercase font-mono text-label tracking-widest relative overflow-hidden">
                   {product.imageUrls?.[0] ? (
                     <img src={product.imageUrls[0]} alt={product.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
                   ) : "No Image Trace"}
@@ -119,8 +128,8 @@ export default function ExploreProductsCatalog() {
                   </div>
                 </div>
 
-                <h4 className="text-xs font-black text-zinc-200 mt-4 uppercase tracking-wide truncate">{product.name}</h4>
-                <p className="text-[11px] text-zinc-600 line-clamp-2 mt-1 leading-normal">{product.description}</p>
+                <Link href={`/user/explore/products/${product.id}`} className="mt-4 block truncate text-xs font-black uppercase tracking-wide text-zinc-200 hover:text-primary">{product.name}</Link>
+                <p className="text-control text-zinc-600 line-clamp-2 mt-1 leading-normal">{product.description}</p>
               </div>
 
               <div className="mt-4 pt-3 border-t border-zinc-900/60 flex items-center justify-between">
@@ -139,5 +148,13 @@ export default function ExploreProductsCatalog() {
 
       </div>
     </div>
+  );
+}
+
+export default function ExploreProductsCatalog() {
+  return (
+    <Suspense fallback={<div className="flex h-[50vh] items-center justify-center bg-zinc-950 text-zinc-500">Loading products…</div>}>
+      <ExploreProductsCatalogContent />
+    </Suspense>
   );
 }

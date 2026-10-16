@@ -1,4 +1,4 @@
-import { transporter, defaultSender } from "@/lib/mailer";
+import { assertMailConfiguration, transporter, defaultSender } from "@/lib/mailer";
 import * as templates from "./templates";
 
 /**
@@ -6,6 +6,7 @@ import * as templates from "./templates";
  * into templates and executing the SMTP delivery pipeline.
  */
 async function dispatch(to: string, subject: string, html: string) {
+  assertMailConfiguration();
   await transporter.sendMail({
     from: defaultSender,
     to,
@@ -17,7 +18,7 @@ async function dispatch(to: string, subject: string, html: string) {
 // --- 1. IDENTITY & SECURITY LIFECYCLE ---
 
 export const sendWelcomeCustomer = (email: string, username: string) => 
-  dispatch(email, "Welcome to Smart Mechanic", templates.getWelcomeCustomerHtml(username, `${process.env.NEXTAUTH_URL}/dashboard`));
+  dispatch(email, "Welcome to Smart Mechanic", templates.getWelcomeCustomerHtml(username, `${process.env.NEXTAUTH_URL}/user`));
 
 export const sendWorkerApplicationReceived = (email: string, username: string) => 
   dispatch(email, "Application Received - Smart Mechanic", templates.getWorkerApplicationReceivedHtml(username));

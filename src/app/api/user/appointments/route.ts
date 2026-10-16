@@ -1,74 +1,51 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Appointment } from "@/generated/prisma";
+import { getSessionUser } from "@/lib/session";
+import { sendAppointmentScheduled } from "@/app/services/email/sender";
 
-// Strict relationship shape maps for the asymmetric payloads returning from Prisma
-type WorkerJobPayload = Appointment & {
-  customer: {
-    name: string;
-    phone: string | null;
-  };
-};
-
-type CustomerAppointmentPayload = Appointment & {
-  worker: {
-    include: {
-      user: {
-        select: {
-          name: true;
-          phone: true;
-        };
-      };
+function readAppointmentDetails(notes: string | null) {
+  if (!notes) return { vehicleType: "SEDAN", vehicleModel: "Standard Fleet Unit", address: "", customerNotes: "" };
+  try {
+    const details = JSON.parse(notes) as {
+      vehicleType?: string;
+      vehicleModel?: string;
+      address?: string;
+      customerNotes?: string;
     };
-  } | null;
-};
-
-type ValidAppointmentUnion = (WorkerJobPayload | CustomerAppointmentPayload)[];
+    return {
+      vehicleType: details.vehicleType || "SEDAN",
+      vehicleModel: details.vehicleModel || "Standard Fleet Unit",
+      address: details.address || "",
+      customerNotes: details.customerNotes || "",
+    };
+  } catch {
+    return { vehicleType: "SEDAN", vehicleModel: "Standard Fleet Unit", address: "", customerNotes: notes };
+  }
+}
 
 // ==========================================
 // 1. GET: Unified List Engine
 // ==========================================
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const userId = request.headers.get("x-user-id") || "";
-    const userRole = request.headers.get("x-user-role") || "CUSTOMER";
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: "UNAUTHORIZED_SESSION" }, { status: 401 });
 
-    // 🟢 FIXED: Explicitly typed structural array boundary to knock out implicit 'any' warnings
-    let appointments: ValidAppointmentUnion = [];
+    const where = user.role === "WORKER"
+      ? { worker: { userId: user.id } }
+      : { customerId: user.id };
 
-    if (userRole === "WORKER") {
-      const workerProfile = await prisma.worker.findUnique({
-        where: { userId }
-      });
-
-      if (workerProfile) {
-        appointments = (await prisma.appointment.findMany({
-          where: { workerId: workerProfile.id },
-          include: {
-            customer: { select: { name: true, phone: true } }
-          },
-          orderBy: { scheduledAt: "desc" }
-        })) as unknown as ValidAppointmentUnion;
-      }
-    } else {
-      appointments = (await prisma.appointment.findMany({
-        where: { customerId: userId },
-        include: {
-          worker: {
-            include: {
-              user: { select: { name: true, phone: true } }
-            }
-          }
-        },
-        orderBy: { scheduledAt: "desc" }
-      })) as unknown as ValidAppointmentUnion;
-    }
-
+    const appointments = await prisma.appointment.findMany({
+      where,
+      include: user.role === "WORKER"
+        ? { customer: { select: { name: true, phone: true, address: true } } }
+        : { worker: { include: { user: { select: { name: true, phone: true } } } } },
+      orderBy: { scheduledAt: "desc" },
+    });
     const normalizedAppointments = appointments.map((appt) => ({
       ...appt,
-      vehicleType: (appt as any).vehicleType || "SEDAN",
-      vehicleModel: (appt as any).vehicleModel || "Standard Fleet Unit",
-      address: (appt as any).address || "Durg, Chhattisgarh",
+      ...readAppointmentDetails(appt.notes),
+      notes: readAppointmentDetails(appt.notes).customerNotes,
     }));
 
     return NextResponse.json({ appointments: normalizedAppointments }, { status: 200 });
@@ -83,33 +60,71 @@ export async function GET(request: Request) {
 // ==========================================
 export async function POST(request: Request) {
   try {
-    const userId = request.headers.get("x-user-id") || "";
-    
-    const body = await request.json();
-    const { workerId, vehicleType, vehicleModel, scheduledAt, notes, address } = body;
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: "UNAUTHORIZED_SESSION" }, { status: 401 });
+    if (user.role !== "CUSTOMER") {
+      return NextResponse.json({ error: "CUSTOMER_ACCOUNT_REQUIRED" }, { status: 403 });
+    }
 
-    let baselinePrice = 1200.00;
+    const body = await request.json();
+    const workerId = typeof body.workerId === "string" ? body.workerId : null;
+    const vehicleType = typeof body.vehicleType === "string" ? body.vehicleType : "";
+    const vehicleModel = typeof body.vehicleModel === "string" ? body.vehicleModel.trim() : "";
+    const address = typeof body.address === "string" ? body.address.trim() : "";
+    const notes = typeof body.notes === "string" ? body.notes.trim() : "";
+    const scheduledAt = new Date(body.scheduledAt);
+
+    if (!vehicleType || !vehicleModel || !address || Number.isNaN(scheduledAt.getTime()) || scheduledAt <= new Date()) {
+      return NextResponse.json({ error: "APPOINTMENT_PARAMETERS_INVALID" }, { status: 400 });
+    }
+
+    let baselinePrice = 1200;
     if (workerId) {
       const mechanic = await prisma.worker.findUnique({
         where: { id: workerId },
-        select: { baseRate: true }
+        select: { baseRate: true, status: true },
       });
-      if (mechanic) baselinePrice += mechanic.baseRate * 2;
+      if (!mechanic || mechanic.status !== "APPROVED") {
+        return NextResponse.json({ error: "APPROVED_WORKER_REQUIRED" }, { status: 400 });
+      }
+      baselinePrice += mechanic.baseRate * 2;
     }
 
     const appointment = await prisma.appointment.create({
       data: {
-        customerId: userId,
+        customerId: user.id,
         workerId: workerId || null,
-        scheduledAt: new Date(scheduledAt),
+        scheduledAt,
         totalPrice: baselinePrice,
-        notes: notes || null,
+        notes: JSON.stringify({ vehicleType, vehicleModel, address, customerNotes: notes }),
         status: "PENDING",
-        vehicleModel,
-        vehicleType,
-        address
       }
     });
+
+    if (workerId) {
+      const assignedWorker = await prisma.worker.findUnique({
+        where: { id: workerId },
+        select: { user: { select: { email: true, name: true } } },
+      });
+      if (assignedWorker) {
+        sendAppointmentScheduled(
+          assignedWorker.user.email,
+          assignedWorker.user.name,
+          appointment.id,
+          vehicleModel,
+          scheduledAt.toLocaleString(),
+          user.name,
+        ).catch((error) => console.error("Worker appointment notification failed:", error));
+      }
+    }
+    sendAppointmentScheduled(
+      user.email,
+      user.name,
+      appointment.id,
+      vehicleModel,
+      scheduledAt.toLocaleString(),
+      "Smart Mechanic",
+    ).catch((error) => console.error("Customer appointment confirmation failed:", error));
 
     return NextResponse.json({ appointmentId: appointment.id }, { status: 201 });
   } catch (error) {

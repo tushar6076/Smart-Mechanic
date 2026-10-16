@@ -26,9 +26,45 @@ export async function getOtp(email: string): Promise<string | null> {
   return await redis.get(`otp:${email}`);
 }
 
+export async function consumeOtp(email: string, code: string): Promise<boolean> {
+  const result = await redis.eval(
+    "local value = redis.call('GET', KEYS[1]); if value and value == ARGV[1] then return redis.call('DEL', KEYS[1]) end; return 0",
+    1,
+    `otp:${email}`,
+    code,
+  );
+  return Number(result) === 1;
+}
+
 /**
  * Evict the token from memory immediately upon successful validation.
  */
 export async function deleteOtp(email: string): Promise<number> {
   return await redis.del(`otp:${email}`);
+}
+
+export async function setPasswordResetToken(
+  token: string,
+  email: string,
+  expireSeconds: number = 600,
+): Promise<void> {
+  await redis.set(`password-reset:${token}`, email, "EX", expireSeconds);
+}
+
+export async function getPasswordResetEmail(token: string): Promise<string | null> {
+  return await redis.get(`password-reset:${token}`);
+}
+
+export async function deletePasswordResetToken(token: string): Promise<number> {
+  return await redis.del(`password-reset:${token}`);
+}
+
+export async function consumePasswordResetToken(token: string, email: string): Promise<boolean> {
+  const result = await redis.eval(
+    "local value = redis.call('GET', KEYS[1]); if value and value == ARGV[1] then return redis.call('DEL', KEYS[1]) end; return 0",
+    1,
+    `password-reset:${token}`,
+    email,
+  );
+  return Number(result) === 1;
 }

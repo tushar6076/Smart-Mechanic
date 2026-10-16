@@ -1,26 +1,48 @@
 import nodemailer from "nodemailer";
 
-// 🛰️ Construct SMTP Transport connection pool using exact .env variables
+const mailHost = process.env.MAIL_SERVER;
+const mailPort = Number(process.env.MAIL_PORT || 587);
+const mailUsername = process.env.MAIL_USERNAME;
+const mailPassword = process.env.MAIL_PASSWORD;
+
+if (!Number.isInteger(mailPort) || mailPort < 1 || mailPort > 65535) {
+  throw new Error("MAIL_PORT must be a valid TCP port number.");
+}
+
 export const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_SERVER || "smtp.gmail.com",
-  port: parseInt(process.env.MAIL_PORT || "587"),
-  secure: process.env.MAIL_PORT === "465", // true for 465, false for other ports like 587
-  auth: {
-    user: process.env.MAIL_USERNAME,
-    pass: process.env.MAIL_PASSWORD,
-  },
+  host: mailHost,
+  port: mailPort,
+  secure: mailPort === 465,
+  requireTLS: mailPort !== 465,
+  auth: mailUsername && mailPassword
+    ? { user: mailUsername, pass: mailPassword }
+    : undefined,
 });
 
-// 🏷️ Format standard sender signature format: "Name" <email@domain.com>
-export const defaultSender = `"${process.env.MAIL_FROM_NAME || "Smart Mechanic"}" <${process.env.MAIL_FROM || "noreply@smartmechanic.com"}>`;
+export const defaultSender = `"${process.env.MAIL_FROM_NAME || "Smart Mechanic"}" <${process.env.MAIL_FROM || mailUsername || ""}>`;
 
-// Optional: Run a quick connection checkpoint diagnostic during initialization in dev environments
+export function assertMailConfiguration(): void {
+  const missing = [
+    ["MAIL_SERVER", mailHost],
+    ["MAIL_USERNAME", mailUsername],
+    ["MAIL_PASSWORD", mailPassword],
+  ].filter(([, value]) => !value).map(([name]) => name);
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required SMTP configuration: ${missing.join(", ")}`);
+  }
+}
+
 if (process.env.NODE_ENV === "development") {
-  transporter.verify((error) => {
+  if (!mailHost || !mailUsername || !mailPassword) {
+    console.error("SMTP connection check skipped: MAIL_SERVER, MAIL_USERNAME, and MAIL_PASSWORD are required.");
+  } else {
+    transporter.verify((error) => {
     if (error) {
       console.error("❌ Email SMTP Subsystem Connection Fault:", error.message);
     } else {
       console.log("🚀 Email SMTP Subsystem Connected & Operational");
     }
-  });
+    });
+  }
 }

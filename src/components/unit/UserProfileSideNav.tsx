@@ -47,7 +47,7 @@ export default function UserProfileSideNav() {
     <aside className="w-full md:w-64 shrink-0 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
       {/* HEADER LABEL */}
       <div className="px-3 mb-4">
-        <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+        <h2 className="text-label font-black uppercase tracking-widest text-zinc-500">
           Account Control
         </h2>
       </div>

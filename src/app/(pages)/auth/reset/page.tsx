@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
@@ -13,12 +13,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
   // 🛰️ Extracted verification context parameters
-  const [email, setEmail] = useState<string | null>(null);
+  const email = searchParams.get("email");
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,16 +28,6 @@ export default function ResetPasswordPage() {
   // 📝 Mutation fields
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
-
-  // 📡 Hydrate parameter context on mount
-  useEffect(() => {
-    const emailParam = searchParams.get("email");
-    if (!emailParam) {
-      setErrorMessage("Missing recovery verification vector. Please re-authenticate via access request portal.");
-    } else {
-      setEmail(emailParam);
-    }
-  }, [searchParams]);
 
   // 🔐 Commit new database identity key mutation
   const handlePasswordMutationSubmit = async (e: React.FormEvent) => {
@@ -52,6 +42,10 @@ export default function ResetPasswordPage() {
 
     if (password !== confirmPassword) {
       setErrorMessage("Cryptographic parameters mismatch. Passwords do not align.");
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMessage("Your password must be at least 8 characters long.");
       return;
     }
 
@@ -77,46 +71,47 @@ export default function ResetPasswordPage() {
         router.push("/auth/login");
       }, 2500);
 
-    } catch (err: any) {
-      setErrorMessage(err.message);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Unable to update the password.");
     } finally {
       setIsLoading(false);
     }
+
   };
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-400 font-sans px-4 select-none">
       {/* 🌌 Ambient Engine Grid Matrix Backplane */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f23_1px,transparent_1px),linear-gradient(to_bottom,#1f1f23_1px,transparent_1px)] bg-[size:3rem_3rem] opacity-20" />
+      <div className="app-grid-overlay absolute inset-0 opacity-20" />
 
       {/* 🧱 RESET TRANSACTION TERMINAL FRAME */}
       <div className="relative w-full max-w-md rounded-2xl border border-zinc-900 bg-zinc-950 p-6 sm:p-8 shadow-2xl shadow-black/90">
         
         {/* 🚨 Error Telemetry Message Hub */}
-        {errorMessage && (
-          <div className="mb-6 rounded-xl border border-red-950/40 bg-red-950/10 p-3 text-[11px] font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
-            <ShieldAlert size={14} className="shrink-0 animate-pulse" /> {errorMessage}
+        {(errorMessage || !email) && (
+          <div className="mb-6 rounded-xl border border-red-950/40 bg-red-950/10 p-3 text-control font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
+            <ShieldAlert size={14} className="shrink-0 animate-pulse" /> {errorMessage || "Missing recovery email. Request a new verification code."}
           </div>
         )}
 
         {/* ✅ Success Telemetry Message Hub */}
         {successMessage && (
-          <div className="mb-6 rounded-xl border border-emerald-950/40 bg-emerald-950/10 p-3 text-[11px] font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-2">
+          <div className="mb-6 rounded-xl border border-emerald-950/40 bg-emerald-950/10 p-3 text-control font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-2">
             <CheckCircle2 size={14} className="shrink-0 text-emerald-400" /> {successMessage}
           </div>
         )}
 
         <form onSubmit={handlePasswordMutationSubmit} className="flex flex-col gap-6">
           <div>
-            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-200">// OVERWRITE CIPHER CORE</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-200">OVERWRITE CIPHER CORE</h2>
             <p className="text-xs text-zinc-500 mt-1">
-              Configure your new cryptographic security parameter for <span className="text-zinc-400 font-mono text-[11px] break-all">{email || "unknown-channel"}</span>
+              Configure your new cryptographic security parameter for <span className="text-zinc-400 font-mono text-control break-all">{email || "unknown-channel"}</span>
             </p>
           </div>
 
           {/* 🔑 FIELD 01: NEW CIPHER */}
           <div className="flex flex-col gap-1.5 relative">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">New Account Cipher</label>
+            <label className="text-label font-black uppercase tracking-widest text-zinc-500">New Account Cipher</label>
             <div className="relative w-full">
               <input 
                 type={showPasswords ? "text" : "password"}
@@ -140,7 +135,7 @@ export default function ResetPasswordPage() {
 
           {/* 🔑 FIELD 02: CONFIRM CIPHER */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Confirm Account Cipher</label>
+            <label className="text-label font-black uppercase tracking-widest text-zinc-500">Confirm Account Cipher</label>
             <div className="relative w-full">
               <input 
                 type={showPasswords ? "text" : "password"}
@@ -177,7 +172,7 @@ export default function ResetPasswordPage() {
         </form>
 
         {/* 🎛️ SYSTEM OVERRIDE FOOTER LINK */}
-        <div className="mt-6 text-center text-[11px] font-bold tracking-wide border-t border-zinc-900 pt-4">
+        <div className="mt-6 text-center text-control font-bold tracking-wide border-t border-zinc-900 pt-4">
           <Link href="/auth/login" className="text-zinc-600 hover:text-primary transition-colors uppercase">
             Cancel and Return to Login Core
           </Link>
@@ -185,5 +180,13 @@ export default function ResetPasswordPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">Loading password reset…</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

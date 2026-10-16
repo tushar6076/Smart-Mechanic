@@ -1,24 +1,11 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/session";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session_token")?.value;
-
-    if (!token) {
-      return NextResponse.json({ user: null }, { status: 401 }); // 🟢 Unauthorized
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: token },
-      select: { id: true, email: true, name: true, role: true }
-    });
-
-    if (!user) {
-      return NextResponse.json({ user: null }, { status: 401 }); // 🟢 Session stale
-    }
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ user: null }, { status: 401 });
 
     let status = "PENDING_VERIFICATION";
     if (user.role === "WORKER") {

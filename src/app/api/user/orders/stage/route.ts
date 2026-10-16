@@ -1,93 +1,111 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/session";
+import { randomUUID } from "node:crypto";
+import {
+  calculateRazorpayOrderTotal,
+  createRazorpayTestOrder,
+  getRazorpayTestKeyId,
+  RazorpayConfigurationError,
+  RazorpayGatewayError,
+} from "@/lib/razorpay";
 
 export async function POST(request: Request) {
   try {
-    const userId = request.headers.get("x-user-id") || "";
-    const body = await request.json();
-    const { address } = body;
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: "UNAUTHORIZED_SESSION" }, { status: 401 });
+    if (user.role !== "CUSTOMER") {
+      return NextResponse.json({ error: "CUSTOMER_ACCOUNT_REQUIRED" }, { status: 403 });
+    }
 
-    if (!address?.trim()) {
+    const body = await request.json();
+    const address = typeof body.address === "string" ? body.address.trim() : "";
+
+    if (!address || address.length > 500) {
       return NextResponse.json({ error: "SHIPPING_COORDINATES_MISSING" }, { status: 400 });
     }
 
-    // 1. Read current staged components allocated under user row session
     const cartItems = await prisma.cart.findMany({
-      where: { userId },
+      where: { userId: user.id },
       include: { product: true },
     });
 
     if (cartItems.length === 0) {
       return NextResponse.json({ error: "PROCUREMENT_BUFFER_EMPTY" }, { status: 400 });
     }
+    if (cartItems.some((item) =>
+      item.quantity > item.product.stock ||
+      !Number.isFinite(item.product.price) ||
+      item.product.price < 0
+    )) {
+      return NextResponse.json({ error: "INSUFFICIENT_STOCK" }, { status: 409 });
+    }
 
-    // 2. Perform a transaction block to generate order rows safely
-    const orderPipelineHandoff = await prisma.$transaction(async (tx) => {
-      // Generate a baseline pending payment instance token row matrix
+    let orderTotals: ReturnType<typeof calculateRazorpayOrderTotal>;
+    try {
+      orderTotals = calculateRazorpayOrderTotal(cartItems.map((item) => ({
+        unitPrice: item.product.price,
+        quantity: item.quantity,
+      })));
+    } catch {
+      return NextResponse.json({ error: "ORDER_AMOUNT_INVALID" }, { status: 400 });
+    }
+
+    const gatewayOrder = await createRazorpayTestOrder(
+      orderTotals.totalPaise,
+      `sm_${randomUUID().replaceAll("-", "")}`,
+    );
+
+    const payment = await prisma.$transaction(async (tx) => {
       const paymentRecord = await tx.payment.create({
         data: {
-          userId,
-          amount: 0.0, // To be re-calculated during execution loops
-          razorpayOrderId: `RPAY_STAGED_${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+          userId: user.id,
+          amount: orderTotals.totalPaise / 100,
+          currency: gatewayOrder.currency,
+          razorpayOrderId: gatewayOrder.id,
           status: "PENDING",
         },
       });
 
-      let calculatedAggregateValue = 0;
-
-      // Populate separate order layout item trackers mapping back to payment references
-      for (const item of cartItems) {
-        const itemCost = item.product.price * item.quantity;
-        calculatedAggregateValue += itemCost;
-
-        await tx.order.create({
-          data: {
-            productId: item.productId,
-            quantity: item.quantity,
-            amount: itemCost,
-            paymentId: paymentRecord.id,
-            status: "PENDING_PAYMENT",
-          },
-        });
-
-        // Decrement item inventory visibility records
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
-      }
-
-      // Add tax weights to final ledger valuation row properties
-      const globalTaxAddition = calculatedAggregateValue * 0.18;
-      const completeValueSum = calculatedAggregateValue + globalTaxAddition;
-
-      // Refresh final structural payment amounts parameters
-      await tx.payment.update({
-        where: { id: paymentRecord.id },
-        data: { amount: completeValueSum },
+      await tx.order.createMany({
+        data: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          amount: Math.round(item.product.price * 100) * item.quantity / 100,
+          paymentId: paymentRecord.id,
+          status: "PENDING_PAYMENT" as const,
+        })),
       });
 
-      // Update user shipping address field dynamically if empty
       await tx.user.update({
-        where: { id: userId },
-        data: { address: address.trim() },
-      });
-
-      // Clear operational cart storage rows completely
-      await tx.cart.deleteMany({
-        where: { userId },
+        where: { id: user.id },
+        data: { address },
       });
 
       return paymentRecord;
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      orderId: orderPipelineHandoff.id 
+    return NextResponse.json({
+      success: true,
+      orderId: payment.id,
+      razorpayOrderId: gatewayOrder.id,
+      keyId: getRazorpayTestKeyId(),
+      amount: gatewayOrder.amount,
+      currency: gatewayOrder.currency,
+      status: payment.status,
+      paymentInitiated: true,
+      testMode: true,
     }, { status: 201 });
 
   } catch (error) {
-    console.error("❌ Order sequence transactional compilation failure:", error);
+    if (error instanceof RazorpayConfigurationError) {
+      return NextResponse.json({ error: "RAZORPAY_TEST_CONFIGURATION_REQUIRED" }, { status: 503 });
+    }
+    if (error instanceof RazorpayGatewayError) {
+      console.error("Razorpay test order could not be created:", error.message);
+      return NextResponse.json({ error: "RAZORPAY_TEST_ORDER_CREATION_FAILED" }, { status: 502 });
+    }
+    console.error("Order sequence transactional compilation failure:", error);
     return NextResponse.json({ error: "ORDER_STAGING_TRANSACTION_FAILURE" }, { status: 500 });
   }
 }

@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get("session_token")?.value;
+    const user = await getSessionUser();
 
-    if (!sessionToken) {
+    if (!user || user.role !== "CUSTOMER") {
       return NextResponse.json(
         { error: "UNAUTHORIZED_SESSION" }, 
         { status: 401 }
@@ -26,10 +25,18 @@ export async function POST(request: Request) {
     }
 
     // 2. Cross-check existing feedback array logs to prevent duplication breaches
+    const completedAppointment = await prisma.appointment.findFirst({
+      where: { customerId: user.id, workerId: workerId, status: "COMPLETED" },
+      select: { id: true },
+    });
+    if (!completedAppointment) {
+      return NextResponse.json({ error: "COMPLETED_APPOINTMENT_REQUIRED" }, { status: 403 });
+    }
+
     const existingReview = await prisma.review.findUnique({
       where: {
         userId_workerId: {
-          userId: sessionToken,
+          userId: user.id,
           workerId: workerId,
         },
       },
@@ -45,7 +52,7 @@ export async function POST(request: Request) {
     // 3. Commit unique performance metrics write operation to database layer
     const review = await prisma.review.create({
       data: {
-        userId: sessionToken,
+        userId: user.id,
         workerId: workerId,
         rating: Math.floor(rating),
         comment: comment || null,

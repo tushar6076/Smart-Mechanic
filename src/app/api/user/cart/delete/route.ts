@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/session";
 
-export async function PATCH(request: Request) {
+export async function DELETE(request: Request) {
   try {
-    const body = await request.json();
-    const { itemId, quantity } = body;
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: "UNAUTHORIZED_SESSION" }, { status: 401 });
+    const itemId = new URL(request.url).searchParams.get("itemId");
+    if (!itemId) return NextResponse.json({ error: "CART_ITEM_REQUIRED" }, { status: 400 });
 
-    if (!itemId || !quantity || quantity < 1) {
-      return NextResponse.json({ error: "QUANTITY_PARAMETER_INVALID" }, { status: 400 });
-    }
-
-    await prisma.cart.update({
-      where: { id: itemId },
-      data: { quantity: Math.floor(quantity) },
-    });
+    const result = await prisma.cart.deleteMany({ where: { id: itemId, userId: user.id } });
+    if (result.count === 0) return NextResponse.json({ error: "CART_ITEM_NOT_FOUND" }, { status: 404 });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

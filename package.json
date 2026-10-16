@@ -6,7 +6,9 @@
     "dev": "next dev -H 127.0.0.1 -p 3001",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3001",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "admin:create": "node scripts/create-admin.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
@@ -40,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

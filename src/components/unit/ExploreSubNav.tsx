@@ -42,7 +42,7 @@ export default function ExploreSubNav() {
                 key={link.path}
                 href={link.path}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all duration-200 border whitespace-nowrap",
+                  "flex items-center gap-2 rounded-lg px-4 py-2 text-control font-black uppercase tracking-widest transition-all duration-200 border whitespace-nowrap",
                   isActive
                     ? "bg-primary/5 border-primary text-white shadow-sm shadow-primary/10"
                     : "bg-zinc-950 border-zinc-900 text-zinc-500 hover:text-zinc-300 hover:border-zinc-800"

@@ -7,8 +7,7 @@ import {
   ArrowLeft, 
   ShoppingCart, 
   Check, 
-  ShieldCheck, 
-  Layers, 
+  Heart,
   Warehouse, 
   Activity 
 } from "lucide-react";
@@ -37,6 +36,8 @@ export default function ProductDetailDynamicPage({ params }: ProductPageProps) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSavingWishlist, setIsSavingWishlist] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadProductTelemetry() {
@@ -60,6 +61,7 @@ export default function ProductDetailDynamicPage({ params }: ProductPageProps) {
   const triggerCartMutation = async () => {
     if (!product || product.stock === 0) return;
     setIsAdding(true);
+    setErrorMessage(null);
     try {
       const res = await fetch("/api/user/cart", {
         method: "POST",
@@ -70,11 +72,35 @@ export default function ProductDetailDynamicPage({ params }: ProductPageProps) {
       if (res.ok) {
         setIsSuccess(true);
         setTimeout(() => setIsSuccess(false), 2000);
+      } else {
+        const data = await res.json();
+        setErrorMessage(res.status === 401 ? "Sign in to add products to your cart." : data.error || "Could not add this product.");
       }
     } catch (err) {
       console.error("Cart cache write error:", err);
+      setErrorMessage("Could not reach the cart service. Please try again.");
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  const saveToWishlist = async () => {
+    if (!product) return;
+    setIsSavingWishlist(true);
+    setErrorMessage(null);
+    try {
+      const response = await fetch("/api/user/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(response.status === 401 ? "Sign in to save products to your wishlist." : data.error || "Could not save this product.");
+      setErrorMessage("Saved to your wishlist.");
+    } catch (cause) {
+      setErrorMessage(cause instanceof Error ? cause.message : "Could not save this product.");
+    } finally {
+      setIsSavingWishlist(false);
     }
   };
 
@@ -95,7 +121,7 @@ export default function ProductDetailDynamicPage({ params }: ProductPageProps) {
         {/* BACK TO BROWSE VECTOR LINK */}
         <Link 
           href="/user/explore/products" 
-          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors w-fit"
+          className="flex items-center gap-2 text-label font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors w-fit"
         >
           <ArrowLeft size={12} /> Back to Tooling Pipeline
         </Link>
@@ -104,7 +130,7 @@ export default function ProductDetailDynamicPage({ params }: ProductPageProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           
           {/* IMAGE PORT HUB */}
-          <div className="aspect-square w-full rounded-2xl border border-zinc-900 bg-zinc-950/40 overflow-hidden flex items-center justify-center font-mono text-[11px] text-zinc-700 tracking-widest relative">
+          <div className="aspect-square w-full rounded-2xl border border-zinc-900 bg-zinc-950/40 overflow-hidden flex items-center justify-center font-mono text-control text-zinc-700 tracking-widest relative">
             {product.imageUrls?.[0] ? (
               <img 
                 src={product.imageUrls[0]} 
@@ -116,26 +142,27 @@ export default function ProductDetailDynamicPage({ params }: ProductPageProps) {
 
           {/* BLOCK SPECS FRAME */}
           <div className="flex flex-col gap-6">
+            {errorMessage && <p role="status" className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-300">{errorMessage} {errorMessage.startsWith("Sign in") && <Link href="/auth/login" className="ml-1 underline text-primary">Login</Link>}</p>}
             <div>
-              <span className="text-[9px] font-mono font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500">
+              <span className="text-micro font-mono font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500">
                 {product.category}
               </span>
               <h1 className="text-xl sm:text-2xl font-black uppercase text-white mt-3 tracking-tight">
                 {product.name}
               </h1>
-              <p className="text-[10px] font-mono text-zinc-600 mt-1 uppercase tracking-wider">
+              <p className="text-label font-mono text-zinc-600 mt-1 uppercase tracking-wider">
                 NODE_ID: ${product.id}
               </p>
             </div>
 
             <div className="border-t border-b border-zinc-900 py-4 flex items-center justify-between">
               <div className="flex flex-col">
-                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Procurement Value</span>
+                <span className="text-micro font-black uppercase tracking-widest text-zinc-600">Procurement Value</span>
                 <span className="text-xl font-black text-white mt-0.5">₹{product.price.toFixed(2)}</span>
               </div>
 
               <div className="flex flex-col items-end">
-                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cluster Availability</span>
+                <span className="text-micro font-black uppercase tracking-widest text-zinc-600">Cluster Availability</span>
                 <div className="flex items-center gap-1.5 mt-1">
                   <Warehouse size={12} className={product.stock > 0 ? "text-emerald-500" : "text-red-500"} />
                   <span className={cn("text-xs font-bold uppercase tracking-wide", product.stock > 0 ? "text-emerald-500" : "text-red-500")}>
@@ -146,7 +173,7 @@ export default function ProductDetailDynamicPage({ params }: ProductPageProps) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">// FUNCTIONAL STATEMENT DESCRIPTION</span>
+              <span className="text-label font-black uppercase tracking-widest text-zinc-500">PRODUCT DESCRIPTION</span>
               <p className="text-xs text-zinc-400 leading-relaxed font-medium">
                 {product.description}
               </p>
@@ -174,6 +201,9 @@ export default function ProductDetailDynamicPage({ params }: ProductPageProps) {
               ) : (
                 <>Commit To Cart Manifest <ShoppingCart size={13} /></>
               )}
+            </button>
+            <button type="button" onClick={saveToWishlist} disabled={isSavingWishlist} className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-800 py-3 text-xs font-bold uppercase tracking-widest text-zinc-300 hover:border-primary hover:text-white disabled:opacity-50">
+              <Heart size={13} /> {isSavingWishlist ? "Saving…" : "Save to wishlist"}
             </button>
           </div>
 

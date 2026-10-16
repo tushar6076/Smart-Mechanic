@@ -59,6 +59,7 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
   const [comment, setComment] = useState<string>("");
   const [reviewSubmitted, setReviewSubmitted] = useState<boolean>(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   useEffect(() => {
     async function syncTrackingTelemetry() {
@@ -88,6 +89,7 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
 
   const handleUpdateStatus = async (targetStatus: AppointmentDetails["status"]) => {
     setIsMutating(true);
+    setStatusError(null);
     try {
       // 🟢 FIXED: Hits our specific worker update-status override endpoint precisely
       const res = await fetch(`/api/user/workers/appointments/update-status`, {
@@ -98,9 +100,13 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
 
       if (res.ok) {
         setAppointment(prev => prev ? { ...prev, status: targetStatus } : null);
+      } else {
+        const data = await res.json();
+        setStatusError(data.error || "Appointment status could not be updated.");
       }
     } catch (err) {
       console.error("Failsafe interceptor blocked state transition mutation:", err);
+      setStatusError("Could not reach the appointment service. Please try again.");
     } finally {
       setIsMutating(false);
     }
@@ -155,20 +161,20 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
     <div className="min-h-screen bg-zinc-950 text-zinc-400 font-sans pb-20 pt-6">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
         
-        <Link href="/user text-zinc-600 hover:text-white transition-colors w-fit flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+        <Link href="/user" className="text-zinc-600 hover:text-white transition-colors w-fit flex items-center gap-2 text-label font-black uppercase tracking-widest">
           <ArrowLeft size={12} /> Exit Dashboard View
         </Link>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-4">
           <div>
-            <span className="text-[10px] font-mono font-bold text-primary tracking-widest uppercase block">// TICKET ID: {appointment.id}</span>
+            <span className="text-label font-mono font-bold text-primary tracking-widest uppercase block">TICKET ID: {appointment.id}</span>
             <h1 className="text-xl font-black text-white uppercase mt-1 tracking-tight">
               {appointment.vehicleModel} Diagnostics Monitor
             </h1>
           </div>
           
           <span className={cn(
-            "text-[10px] font-mono font-black px-3 py-1.5 rounded-lg border tracking-widest uppercase w-fit shrink-0",
+            "text-label font-mono font-black px-3 py-1.5 rounded-lg border tracking-widest uppercase w-fit shrink-0",
             appointment.status === "PENDING" ? "bg-zinc-900 text-zinc-500 border-zinc-800" :
             appointment.status === "CONFIRMED" ? "bg-cyan-950/40 text-cyan-400 border-cyan-900" :
             appointment.status === "IN_PROGRESS" ? "bg-amber-950/40 text-amber-400 border-amber-900" :
@@ -186,7 +192,7 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
                 <FileText size={13} className="text-primary" /> LOGISTICS MANIFEST METRICS
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-[11px] leading-relaxed">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-control leading-relaxed">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-zinc-600 uppercase">Fleet Class Asset:</span>
                   <span className="text-zinc-300 font-bold">{appointment.vehicleType}</span>
@@ -205,13 +211,15 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
 
               {appointment.notes && (
                 <div className="border-t border-zinc-900 pt-3 flex flex-col gap-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Operator Symptom Statement:</span>
+                  <span className="text-micro font-black uppercase tracking-widest text-zinc-600">Operator Symptom Statement:</span>
                   <p className="text-xs text-zinc-400 font-medium leading-relaxed bg-zinc-900 border border-zinc-800 p-3 rounded-lg">
-                    "{appointment.notes}"
+                  {appointment.notes}
                   </p>
                 </div>
               )}
             </div>
+
+            {statusError && <p role="alert" className="rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-sm text-red-300">{statusError}</p>}
 
             {/* WORKER STATE HOTKEYS */}
             {isWorkerPerspective && appointment.status !== "COMPLETED" && appointment.status !== "CANCELLED" && (
@@ -220,15 +228,24 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
                   <h3 className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-1.5">
                     <Wrench size={13} className="text-primary" /> Technician State Override Panel
                   </h3>
-                  <p className="text-[11px] text-zinc-500 mt-0.5 font-medium">Advance the active task status pipeline matching your real-time processing milestones.</p>
+                  <p className="text-control text-zinc-500 mt-0.5 font-medium">Advance the active task status pipeline matching your real-time processing milestones.</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-1">
+                  {appointment.status === "PENDING" && (
+                    <button
+                      onClick={() => handleUpdateStatus("CONFIRMED")}
+                      disabled={isMutating}
+                      className="rounded-lg bg-primary hover:bg-red-600 text-white font-black uppercase text-label tracking-widest px-4 py-2.5 transition-all shadow-md shadow-primary/10"
+                    >
+                      Confirm Appointment
+                    </button>
+                  )}
                   {appointment.status === "CONFIRMED" && (
                     <button
                       onClick={() => handleUpdateStatus("IN_PROGRESS")}
                       disabled={isMutating}
-                      className="rounded-lg bg-primary hover:bg-red-600 text-white font-black uppercase text-[10px] tracking-widest px-4 py-2.5 transition-all shadow-md shadow-primary/10"
+                      className="rounded-lg bg-primary hover:bg-red-600 text-white font-black uppercase text-label tracking-widest px-4 py-2.5 transition-all shadow-md shadow-primary/10"
                     >
                       Initialize Operations [IN_PROGRESS]
                     </button>
@@ -237,7 +254,7 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
                     <button
                       onClick={() => handleUpdateStatus("COMPLETED")}
                       disabled={isMutating}
-                      className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-[10px] tracking-widest px-4 py-2.5 transition-all shadow-md shadow-emerald-900/10"
+                      className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-label tracking-widest px-4 py-2.5 transition-all shadow-md shadow-emerald-900/10"
                     >
                       Finalize & Close Ticket [COMPLETED]
                     </button>
@@ -253,7 +270,7 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
                   <h3 className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-1.5">
                     <Star size={13} className="text-amber-500" /> Dispatch Performance Appraisal Manifest
                   </h3>
-                  <p className="text-[11px] text-zinc-500 mt-0.5 font-medium">Log performance parameters for the assigned field engineer.</p>
+                  <p className="text-control text-zinc-500 mt-0.5 font-medium">Log performance parameters for the assigned field engineer.</p>
                 </div>
 
                 {reviewSubmitted ? (
@@ -263,13 +280,13 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
                 ) : (
                   <form onSubmit={handleReviewSubmission} className="flex flex-col gap-4">
                     {reviewError && (
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-red-400 bg-red-950/10 border border-red-900 p-2.5 rounded-lg">
+                      <div className="text-label font-bold uppercase tracking-wide text-red-400 bg-red-950/10 border border-red-900 p-2.5 rounded-lg">
                         {reviewError}
                       </div>
                     )}
                     
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Appraisal Rating Index</label>
+                      <label className="text-micro font-black uppercase tracking-widest text-zinc-500">Appraisal Rating Index</label>
                       <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map((idx) => (
                           <button
@@ -286,7 +303,7 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Appraisal Commentary Statement</label>
+                      <label className="text-micro font-black uppercase tracking-widest text-zinc-500">Appraisal Commentary Statement</label>
                       <textarea
                         rows={3}
                         value={comment}
@@ -299,7 +316,7 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
                     <button
                       type="submit"
                       disabled={isMutating}
-                      className="w-fit rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-black uppercase text-[10px] tracking-widest px-4 py-2.5 transition-all"
+                      className="w-fit rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-black uppercase text-label tracking-widest px-4 py-2.5 transition-all"
                     >
                       {isMutating ? "Compiling Logs..." : "Commit Appraisal Log"}
                     </button>
@@ -311,32 +328,32 @@ export default function AppointmentTrackingRoomPage({ params }: PageProps) {
 
           <div className="flex flex-col gap-4">
             <div className="rounded-xl border border-zinc-900 bg-zinc-950/40 p-4 flex flex-col gap-3">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1.5 border-b border-zinc-900 pb-2">
+              <h4 className="text-label font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1.5 border-b border-zinc-900 pb-2">
                 {isWorkerPerspective ? <User size={12} /> : <Wrench size={12} />} 
                 {isWorkerPerspective ? "Customer Metadata" : "Assigned Specialist"}
               </h4>
 
               {isWorkerPerspective ? (
-                <div className="flex flex-col gap-1 font-mono text-[11px]">
+                <div className="flex flex-col gap-1 font-mono text-control">
                   <span className="text-zinc-300 font-bold uppercase">{appointment.customer.name}</span>
                   <span className="text-zinc-600 uppercase mt-0.5">TEL: {appointment.customer.phone || "No direct trunk trace"}</span>
                 </div>
               ) : appointment.worker ? (
-                <div className="flex flex-col gap-1 font-mono text-[11px]">
+                <div className="flex flex-col gap-1 font-mono text-control">
                   <span className="text-zinc-300 font-bold uppercase flex items-center gap-1">
                     {appointment.worker.user.name} <ShieldCheck size={12} className="text-primary" />
                   </span>
                   <span className="text-zinc-600 uppercase mt-0.5">TEL: {appointment.worker.user.phone || "Encrypted via proxy"}</span>
                 </div>
               ) : (
-                <div className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider flex items-center gap-1.5 py-1">
+                <div className="text-control font-bold text-zinc-600 uppercase tracking-wider flex items-center gap-1.5 py-1">
                   <Clock size={12} className="animate-pulse" /> Unassigned Node Queue Pool
                 </div>
               )}
             </div>
 
             <div className="rounded-xl border border-zinc-900 bg-zinc-950/40 p-4 flex flex-col gap-1.5">
-              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Settlement Valuation</span>
+              <span className="text-micro font-black uppercase tracking-widest text-zinc-600">Settlement Valuation</span>
               <span className="text-base font-mono font-black text-white mt-0.5">₹{appointment.totalPrice.toFixed(2)}</span>
             </div>
           </div>

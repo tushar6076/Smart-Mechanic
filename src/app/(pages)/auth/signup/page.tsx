@@ -192,7 +192,7 @@ export default function SignupWizardPage() {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-400 font-sans px-4 py-16 select-none">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f23_1px,transparent_1px),linear-gradient(to_bottom,#1f1f23_1px,transparent_1px)] bg-[size:3rem_3rem] opacity-20" />
+      <div className="app-grid-overlay absolute inset-0 opacity-20" />
 
       {/* 📊 STEP-BY-STEP FLOW MATRIX PREVIEW */}
       <div className="relative w-full max-w-xl flex items-center justify-between mb-8 px-4">
@@ -200,7 +200,7 @@ export default function SignupWizardPage() {
           <React.Fragment key={step}>
             <div className="flex items-center gap-2">
               <div className={cn(
-                "h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-black tracking-tight transition-all duration-300",
+                "h-6 w-6 rounded-md flex items-center justify-center text-label font-black tracking-tight transition-all duration-300",
                 currentLayer >= (step as number) 
                   ? "bg-primary text-white shadow-sm shadow-primary/20 border border-primary" 
                   : "bg-zinc-900 border border-zinc-800 text-zinc-600"
@@ -208,7 +208,7 @@ export default function SignupWizardPage() {
                 {step}
               </div>
               <span className={cn(
-                "text-[9px] font-black uppercase tracking-widest hidden sm:inline",
+                "text-micro font-black uppercase tracking-widest hidden sm:inline",
                 currentLayer === step ? "text-zinc-200" : "text-zinc-600"
               )}>
                 {step === 1 && "Role"}
@@ -228,7 +228,7 @@ export default function SignupWizardPage() {
       <div className="relative w-full max-w-xl rounded-2xl border border-zinc-900 bg-zinc-950 p-6 sm:p-8 shadow-2xl shadow-black/90">
         
         {errorMessage && (
-          <div className="mb-6 rounded-xl border border-red-950/40 bg-red-950/10 p-3 text-[11px] font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
+          <div className="mb-6 rounded-xl border border-red-950/40 bg-red-950/10 p-3 text-control font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
             <ShieldAlert size={14} className="shrink-0 animate-pulse" /> {errorMessage}
           </div>
         )}
@@ -260,7 +260,7 @@ export default function SignupWizardPage() {
                   </div>
                   <div>
                     <h4 className="text-xs font-black uppercase tracking-wider text-zinc-200">Customer Core Portal</h4>
-                    <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">Book elite mechanical field deployments, log diagnostics, and track logistics.</p>
+                    <p className="text-control text-zinc-500 mt-1 leading-relaxed">Book elite mechanical field deployments, log diagnostics, and track logistics.</p>
                   </div>
                 </button>
 
@@ -277,7 +277,7 @@ export default function SignupWizardPage() {
                   </div>
                   <div>
                     <h4 className="text-xs font-black uppercase tracking-wider text-zinc-200">Field Service Engineer</h4>
-                    <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">Process work tickets, manage tooling catalogs, and undergo manual vetting layers.</p>
+                    <p className="text-control text-zinc-500 mt-1 leading-relaxed">Process work tickets, manage tooling catalogs, and undergo manual vetting layers.</p>
                   </div>
                 </button>
               </div>
@@ -301,7 +301,7 @@ export default function SignupWizardPage() {
               </div>
 
               <div className="flex flex-col gap-1.5 mt-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">System Channel Email Address</label>
+                <label className="text-label font-black uppercase tracking-widest text-zinc-500">System Channel Email Address</label>
                 <input 
                   type="email"
                   required
@@ -314,7 +314,7 @@ export default function SignupWizardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cryptographic Cipher</label>
+                  <label className="text-label font-black uppercase tracking-widest text-zinc-500">Cryptographic Cipher</label>
                   <div className="relative w-full">
                     <input 
                       type={showPassword ? "text" : "password"}
@@ -335,7 +335,7 @@ export default function SignupWizardPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Re-verify Cipher Vector</label>
+                  <label className="text-label font-black uppercase tracking-widest text-zinc-500">Re-verify Cipher Vector</label>
                   <input 
                     type={showPassword ? "text" : "password"}
                     required
@@ -376,7 +376,7 @@ export default function SignupWizardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Full Signature Name</label>
+                  <label className="text-label font-black uppercase tracking-widest text-zinc-500">Full Signature Name</label>
                   <input 
                     type="text"
                     required
@@ -388,7 +388,7 @@ export default function SignupWizardPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Contact Number (Phone Vector)</label>
+                  <label className="text-label font-black uppercase tracking-widest text-zinc-500">Contact Number (Phone Vector)</label>
                   <input 
                     type="tel"
                     value={formData.phone}
@@ -401,7 +401,7 @@ export default function SignupWizardPage() {
 
               {/* 🖼️ PROFILE PICTURE ASSET URL INPUT */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Profile Picture Avatar Link (Optional)</label>
+                <label className="text-label font-black uppercase tracking-widest text-zinc-500">Profile Picture Avatar Link (Optional)</label>
                 <div className="relative w-full">
                   <input 
                     type="url"
@@ -417,7 +417,7 @@ export default function SignupWizardPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Full Structural Operational Address</label>
+                <label className="text-label font-black uppercase tracking-widest text-zinc-500">Full Structural Operational Address</label>
                 <textarea 
                   required
                   rows={2}
@@ -463,7 +463,7 @@ export default function SignupWizardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Date of Birth Metric</label>
+                  <label className="text-label font-black uppercase tracking-widest text-zinc-500">Date of Birth Metric</label>
                   <input 
                     title="select date of birth for age verification and compliance routing"
                     type="date"
@@ -475,7 +475,7 @@ export default function SignupWizardPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Structural Experience (Years)</label>
+                  <label className="text-label font-black uppercase tracking-widest text-zinc-500">Total Structural Experience (Years)</label>
                   <input 
                     type="number"
                     min={0}
@@ -490,7 +490,7 @@ export default function SignupWizardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Identity Document Type</label>
+                  <label className="text-label font-black uppercase tracking-widest text-zinc-500">Identity Document Type</label>
                   <select
                     title="select the type of identity document for verification"
                     value={formData.idProofType}
@@ -505,7 +505,7 @@ export default function SignupWizardPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Identity Secure ID Number</label>
+                  <label className="text-label font-black uppercase tracking-widest text-zinc-500">Identity Secure ID Number</label>
                   <input 
                     type="text"
                     required
@@ -519,7 +519,7 @@ export default function SignupWizardPage() {
 
               {/* 📂 SECURE PROOF URL ASSET */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Identity Document Remote Asset URL</label>
+                <label className="text-label font-black uppercase tracking-widest text-zinc-500">Identity Document Remote Asset URL</label>
                 <div className="relative w-full">
                   <input 
                     type="url"
@@ -537,12 +537,12 @@ export default function SignupWizardPage() {
 
               {/* 🛠️ ASYNC DATABASE CONNECTED SERVICE SELECTION MATRIX */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Select Global Core Competencies</label>
+                <label className="text-label font-black uppercase tracking-widest text-zinc-500">Select Global Core Competencies</label>
                 
                 {isFetchingServices ? (
                   <div className="flex items-center gap-2 p-4 justify-center bg-zinc-900/50 rounded-xl border border-zinc-900">
                     <Activity size={12} className="animate-spin text-primary" />
-                    <span className="text-[11px] uppercase tracking-widest text-zinc-600">Streaming operational catalogs...</span>
+                    <span className="text-control uppercase tracking-widest text-zinc-600">Streaming operational catalogs...</span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
@@ -554,7 +554,7 @@ export default function SignupWizardPage() {
                           key={service.id}
                           onClick={() => toggleServiceRelation(service.id)}
                           className={cn(
-                            "p-2.5 rounded-lg border text-left text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-between",
+                            "p-2.5 rounded-lg border text-left text-control font-bold uppercase tracking-wider transition-all flex items-center justify-between",
                             isSelected 
                               ? "bg-primary/5 border-primary text-primary" 
                               : "bg-zinc-900 border-zinc-800/80 text-zinc-500 hover:text-zinc-400"
@@ -571,7 +571,7 @@ export default function SignupWizardPage() {
                       type="button"
                       onClick={() => setShowCustomSkillsInput(!showCustomSkillsInput)}
                       className={cn(
-                        "p-2.5 rounded-lg border text-left text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-between",
+                        "p-2.5 rounded-lg border text-left text-control font-bold uppercase tracking-wider transition-all flex items-center justify-between",
                         showCustomSkillsInput || formData.customSkills.trim()
                           ? "bg-zinc-900 border-zinc-700 text-zinc-200"
                           : "bg-zinc-950 border-dashed border-zinc-800 text-zinc-600 hover:text-zinc-400"
@@ -587,7 +587,7 @@ export default function SignupWizardPage() {
               {/* DYNAMIC COMPLIANCE FALLBACK STRINGS BOX */}
               {(showCustomSkillsInput || formData.customSkills.trim() !== "") && (
                 <div className="flex flex-col gap-1.5 animate-fadeIn">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-primary">Specify Unlisted Competency Elements</label>
+                  <label className="text-label font-black uppercase tracking-widest text-primary">Specify Unlisted Competency Elements</label>
                   <input
                     type="text"
                     value={formData.customSkills}
@@ -619,7 +619,7 @@ export default function SignupWizardPage() {
 
         </form>
 
-        <div className="mt-6 text-center text-[11px] font-bold tracking-wide border-t border-zinc-900 pt-4">
+        <div className="mt-6 text-center text-control font-bold tracking-wide border-t border-zinc-900 pt-4">
           <span className="text-zinc-600 uppercase">Already Synchronized? </span>
           <Link href="/auth/login" className="text-primary hover:text-red-400 transition-colors uppercase ml-1">
             Execute Login &rarr;

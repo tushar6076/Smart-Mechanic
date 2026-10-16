@@ -65,7 +65,7 @@ export default function ExploreOverviewPage() {
         
         {/* HERO SEARCH ENGINE BANNER */}
         <div className="rounded-2xl border border-zinc-900 bg-gradient-to-b from-zinc-900/30 to-zinc-950 p-8 text-center relative overflow-hidden shadow-2xl">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.03),transparent_70%)] pointer-events-none" />
+          <div className="app-brand-glow absolute inset-0 pointer-events-none" />
           
           <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white italic">
             SEARCH THE ECOSYSTEM INDEX
@@ -83,7 +83,7 @@ export default function ExploreOverviewPage() {
               className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 pl-11 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-primary transition-colors shadow-inner font-medium"
             />
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary hover:bg-red-600 text-white font-black uppercase text-[10px] tracking-widest px-3 py-1.5 rounded-lg transition-colors">
+            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary hover:bg-red-600 text-white font-black uppercase text-label tracking-widest px-3 py-1.5 rounded-lg transition-colors">
               Execute Query
             </button>
           </form>
@@ -99,7 +99,7 @@ export default function ExploreOverviewPage() {
               <h3 className="text-sm font-black uppercase tracking-wider text-white mt-4">// FIELD ENGINEERING OPERATIONS</h3>
               <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Connect into local deployment tracks. Query verified engineering specialists, check customer ratings vectors, and schedule remote site diagnostics.</p>
             </div>
-            <Link href="/user/explore/workers" className="mt-6 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary group-hover:text-white transition-colors">
+            <Link href="/user/explore/workers" className="mt-6 flex items-center gap-1.5 text-label font-black uppercase tracking-widest text-primary group-hover:text-white transition-colors">
               Open Workers Directory <ArrowRight size={12} />
             </Link>
           </div>
@@ -112,7 +112,7 @@ export default function ExploreOverviewPage() {
               <h3 className="text-sm font-black uppercase tracking-wider text-white mt-4">// SUPPLY LINE INTERFACE</h3>
               <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Source heavy industrial tooling parameters, replacement components, and calibrated gauge diagnostics hardware instruments.</p>
             </div>
-            <Link href="/user/explore/products" className="mt-6 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary group-hover:text-white transition-colors">
+            <Link href="/user/explore/products" className="mt-6 flex items-center gap-1.5 text-label font-black uppercase tracking-widest text-primary group-hover:text-white transition-colors">
               Browse Tools Catalog <ArrowRight size={12} />
             </Link>
           </div>
@@ -152,7 +152,7 @@ export default function ExploreOverviewPage() {
                     <span className="text-xs font-bold uppercase tracking-wide text-zinc-300 group-hover:text-white transition-colors mt-1 truncate max-w-full">
                       {cat.name}
                     </span>
-                    <span className="text-[10px] font-mono tracking-wider text-zinc-600">{cat.count}</span>
+                    <span className="text-label font-mono tracking-wider text-zinc-600">{cat.count}</span>
                   </Link>
                 );
               })}

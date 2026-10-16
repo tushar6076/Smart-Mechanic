@@ -1,19 +1,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/session";
 
 export async function PATCH(request: Request) {
   try {
-    const body = await request.json();
-    const { itemId, quantity } = body;
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: "UNAUTHORIZED_SESSION" }, { status: 401 });
 
-    if (!itemId || !quantity || quantity < 1) {
+    const body = await request.json();
+    const itemId = typeof body.itemId === "string" ? body.itemId : "";
+    const quantity = Number(body.quantity);
+
+    if (!itemId || !Number.isInteger(quantity) || quantity < 1) {
       return NextResponse.json({ error: "QUANTITY_PARAMETER_INVALID" }, { status: 400 });
     }
 
-    await prisma.cart.update({
-      where: { id: itemId },
-      data: { quantity: Math.floor(quantity) },
+    const item = await prisma.cart.findFirst({
+      where: { id: itemId, userId: user.id },
+      include: { product: { select: { stock: true } } },
     });
+    if (!item) return NextResponse.json({ error: "CART_ITEM_NOT_FOUND" }, { status: 404 });
+    if (quantity > item.product.stock) {
+      return NextResponse.json({ error: "INSUFFICIENT_STOCK" }, { status: 409 });
+    }
+
+    await prisma.cart.update({ where: { id: item.id }, data: { quantity } });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

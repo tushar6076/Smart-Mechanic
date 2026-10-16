@@ -6,7 +6,13 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# STAGE 2: Builder
+# STAGE 2: Database migrations
+FROM deps AS migrator
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+CMD ["npx", "prisma", "migrate", "deploy"]
+
+# STAGE 3: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -19,12 +25,14 @@ RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
-# STAGE 3: Runner
+# STAGE 4: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV HOSTNAME 0.0.0.0
+ENV PORT 3001
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -41,7 +49,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 EXPOSE 3001
-ENV PORT 3001
 
 # Start using the standalone server.js
 CMD ["node", "server.js"]

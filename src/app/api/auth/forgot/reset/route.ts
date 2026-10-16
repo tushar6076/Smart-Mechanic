@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { deleteOtp } from "@/lib/redis";
+import { consumePasswordResetToken, getPasswordResetEmail } from "@/lib/redis";
 import { sendResetSuccess } from "@/app/services/email/sender";
 import bcrypt from "bcryptjs";
 
@@ -9,64 +10,58 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, password } = body;
 
-    // 1. Initial sanity telemetry checks on incoming payload parameters
-    if (!email || !password) {
+    if (typeof email !== "string" || typeof password !== "string" || password.length < 8) {
       return NextResponse.json(
-        { message: "Missing required tracking parameters for mutation pass." }, 
+        { message: "A valid email and a password of at least 8 characters are required." },
         { status: 400 }
       );
     }
 
     const targetEmail = email.toLowerCase().trim();
+    const cookieStore = await cookies();
+    const token = cookieStore.get("password_reset_token")?.value;
+    const authorizedEmail = token ? await getPasswordResetEmail(token) : null;
 
-    // 2. Scan the database to ensure the target identity node is completely valid
+    if (!token || authorizedEmail !== targetEmail) {
+      return NextResponse.json({ message: "Verify your email before resetting the password." }, { status: 401 });
+    }
+
     const targetUser = await prisma.user.findUnique({
       where: { email: targetEmail },
       select: { id: true, name: true, email: true }
     });
 
     if (!targetUser) {
-      return NextResponse.json(
-        { message: "Identity signature match failed. User record not found." }, 
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "The account could not be found." }, { status: 404 });
     }
 
-    // 3. Encrypt the incoming new raw password string parameter
-    const saltRounds = 10;
-    const hashedNewPassword = await bcrypt.hash(password, saltRounds);
+    if (!(await consumePasswordResetToken(token, targetEmail))) {
+      return NextResponse.json({ message: "The password reset authorization is invalid or expired." }, { status: 401 });
+    }
 
-    // 4. Mutation block: Overwrite the credentials property row inside PostgreSQL storage shards
+    const hashedNewPassword = await bcrypt.hash(password, 10);
     await prisma.user.update({
       where: { email: targetEmail },
       data: { password: hashedNewPassword }
     });
 
-    // 5. Cleanup Execution: Evict the short-lived validation token completely from Redis memory registers
-    try {
-      await deleteOtp(targetEmail);
-    } catch (redisError) {
-      // Non-blocking catch to log Redis timeouts without disrupting user password completion states
-      console.warn("Non-blocking cluster trace: Volatile token cache eviction skipped or failed:", redisError);
-    }
-
-    // 6. Security Event Dispatch: Trigger the asynchronous Nodemailer notification loop
     try {
       await sendResetSuccess(targetUser.email, targetUser.name);
     } catch (mailError) {
-      console.error("Background validation alert email pipeline dispatch failed:", mailError);
+      console.error("Password reset confirmation email could not be delivered:", mailError);
     }
 
-    return NextResponse.json(
-      { message: "Cryptographic credential parameters mutated successfully." }, 
-      { status: 200 }
-    );
-
-  } catch (error: any) {
+    const response = NextResponse.json({ message: "Password updated successfully." });
+    response.cookies.set("password_reset_token", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/api/auth/forgot/reset",
+      maxAge: 0,
+    });
+    return response;
+  } catch (error) {
     console.error("Critical failure during backend password override execution layer:", error);
-    return NextResponse.json(
-      { message: "Internal application engine compilation breakdown exception." }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Unable to update the password right now." }, { status: 500 });
   }
 }

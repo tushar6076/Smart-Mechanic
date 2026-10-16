@@ -28,8 +28,15 @@ export default function AdminNavbar() {
     { name: "Applications", href: "/admin/application", exact: false, icon: CalendarRange },
   ];
 
-  const handleLogout = () => {
-    router.push("/auth/login");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (error) {
+      console.error("Admin logout request failed:", error);
+    } finally {
+      router.replace("/auth/login");
+      router.refresh();
+    }
   };
 
   return (
@@ -61,7 +68,7 @@ export default function AdminNavbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all duration-150 border",
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-control font-bold uppercase tracking-wider transition-all duration-150 border",
                   isActive
                     ? "bg-red-950/30 border-red-900/60 text-red-400"
                     : "bg-transparent border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
@@ -96,7 +103,7 @@ export default function AdminNavbar() {
           {/* Logout Action Button */}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-red-400 hover:border-red-950/60 hover:bg-red-950/20 transition-all duration-200 text-[11px] font-bold uppercase tracking-widest"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-red-400 hover:border-red-950/60 hover:bg-red-950/20 transition-all duration-200 text-control font-bold uppercase tracking-widest"
             title="Terminate Admin Session"
           >
             <span className="hidden sm:inline">Exit Node</span>

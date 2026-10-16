@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { 
-  Wrench, 
   ShoppingBag, 
   Users, 
   ShieldAlert, 
@@ -81,25 +80,21 @@ export default function UserHomePage() {
             
             // Branch execution if role context mirrors a valid database worker row
             if (authData.user.role === "WORKER") {
-              const appointmentsResponse = await fetch(`/api/worker/appointments?userId=${authData.user.id}`);
+              const appointmentsResponse = await fetch("/api/user/appointments");
               if (appointmentsResponse.ok) {
                 const appointmentsData = await appointmentsResponse.json();
                 if (isMounted) setWorkerAppointments(appointmentsData.appointments || []);
               }
 
-              const statusResponse = await fetch(`/api/worker/profile-status?userId=${authData.user.id}`);
-              if (statusResponse.ok) {
-                const statusData = await statusResponse.json();
-                if (isMounted && statusData.status) {
-                  setCurrentWorkerStatus(statusData.status);
-                }
+              if (isMounted && authData.user.status) {
+                setCurrentWorkerStatus(authData.user.status);
               }
             }
           }
         }
 
         // Independent pipeline query fetch for worker indices layout matching 'APPROVED'
-        const publicWorkersResponse = await fetch("/api/public/explore-workers");
+        const publicWorkersResponse = await fetch("/api/public/explore/workers");
         if (publicWorkersResponse.ok) {
           const publicWorkersData = await publicWorkersResponse.json();
           if (isMounted) setTopWorkers(publicWorkersData.workers || []);
@@ -121,7 +116,7 @@ export default function UserHomePage() {
       <div className="flex h-[70vh] w-full items-center justify-center bg-zinc-950 text-zinc-400">
         <div className="flex flex-col items-center gap-3">
           <Activity className="h-5 w-5 animate-spin text-primary" />
-          <span className="text-[11px] font-black uppercase tracking-widest text-zinc-700">
+          <span className="text-control font-black uppercase tracking-widest text-zinc-700">
             Parsing Schema Connection Node...
           </span>
         </div>
@@ -159,8 +154,8 @@ export default function UserHomePage() {
               </p>
               {isGuest && (
                 <div className="mt-4 flex">
-                  <Link href="/auth/login" className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-red-400 transition-colors border border-primary/20 bg-primary/5 px-3 py-1.5 rounded-lg">
-                    // Link Account Node For Complete Operational Privilege
+                  <Link href="/auth/login" className="text-label font-black uppercase tracking-widest text-primary hover:text-red-400 transition-colors border border-primary/20 bg-primary/5 px-3 py-1.5 rounded-lg">
+                    Link Account Node For Complete Operational Privilege
                   </Link>
                 </div>
               )}
@@ -198,16 +193,16 @@ export default function UserHomePage() {
                           {/* 🟢 FIXED: Reads cleanly from relation query model objects array map block */}
                           <div className="flex flex-wrap gap-1 mt-2">
                             {worker.services && worker.services.slice(0, 2).map((srv, idx) => (
-                              <span key={idx} className="bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400 rounded">
+                              <span key={idx} className="bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 text-micro font-bold uppercase tracking-wider text-zinc-400 rounded">
                                 {srv.name}
                               </span>
                             ))}
                           </div>
                         </div>
-                        <div className="flex items-center justify-between border-t border-zinc-900 pt-3 mt-4 text-[10px] font-bold uppercase tracking-wider">
+                        <div className="flex items-center justify-between border-t border-zinc-900 pt-3 mt-4 text-label font-bold uppercase tracking-wider">
                           <span className="text-zinc-600">Experience: {worker.experience} Yrs</span>
                           <span className={cn(worker.status === "APPROVED" ? "text-emerald-500" : "text-amber-500")}>
-                            // {worker.status}
+                            {worker.status}
                           </span>
                         </div>
                       </div>
@@ -228,9 +223,9 @@ export default function UserHomePage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {["Diagnostic Telemetry Rig", "Heavy Pressure Gauges", "Calibrated Impact Sets"].map((item, index) => (
                   <div key={index} className="rounded-xl border border-zinc-900 p-6 bg-zinc-950/20 flex flex-col justify-between items-start group hover:border-zinc-800 transition-colors">
-                    <span className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase">SYS-INVENTORY-NODES</span>
+                    <span className="text-label font-mono tracking-widest text-zinc-600 uppercase">SYS-INVENTORY-NODES</span>
                     <h4 className="text-xs font-bold text-zinc-400 mt-2 uppercase tracking-wide">{item}</h4>
-                    <Link href="/user/explore/products" className="text-[9px] font-black uppercase tracking-widest text-primary mt-4 hover:text-white transition-colors">
+                    <Link href="/user/explore/products" className="text-micro font-black uppercase tracking-widest text-primary mt-4 hover:text-white transition-colors">
                       Query Stock Data &rarr;
                     </Link>
                   </div>
@@ -298,14 +293,14 @@ export default function UserHomePage() {
                     <div key={job.id} className="rounded-xl border border-zinc-900 bg-zinc-950/30 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-zinc-800 transition-colors">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-primary tracking-wider">
+                          <span className="text-label font-mono font-black px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-primary tracking-wider">
                             {job.id}
                           </span>
                           <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wide">
                             {job.customer?.name || "Client"}
                           </h4>
                           <span className={cn(
-                            "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
+                            "text-micro font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
                             job.status === "CONFIRMED" ? "bg-cyan-950 text-cyan-400 border border-cyan-900" :
                             job.status === "IN_PROGRESS" ? "bg-amber-950 text-amber-400 border border-amber-900" :
                             "bg-zinc-900 text-zinc-500 border border-zinc-800"
@@ -314,9 +309,9 @@ export default function UserHomePage() {
                           </span>
                         </div>
                         <p className="text-xs text-zinc-500 mt-1.5">
-                          <span className="text-zinc-600 font-bold uppercase text-[10px] tracking-wider">Statement:</span> {job.notes || "No notes submitted."}
+                          <span className="text-zinc-600 font-bold uppercase text-label tracking-wider">Statement:</span> {job.notes || "No notes submitted."}
                         </p>
-                        <p className="text-[11px] text-zinc-400 font-semibold mt-0.5">
+                        <p className="text-control text-zinc-400 font-semibold mt-0.5">
                           Scheduled Execution Period: {new Date(job.scheduledAt).toLocaleString()}
                         </p>
                       </div>
@@ -325,7 +320,7 @@ export default function UserHomePage() {
                         <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-bold uppercase tracking-wider">
                           <MapPin size={13} className="text-zinc-600" /> {job.customer?.address || "Field Coordinates Unassigned"}
                         </div>
-                        <span className="text-[11px] font-black tracking-tight text-white mt-1">
+                        <span className="text-control font-black tracking-tight text-white mt-1">
                           Settlement Value: ₹{job.totalPrice.toFixed(2)}
                         </span>
                       </div>

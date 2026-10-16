@@ -137,7 +137,7 @@ export default function UserNavbar() {
           {/* 🟢 CONDITIONAL SWITCH: If false, it renders your original structured Button style */}
           {!isSignedIn ? (
             <Link href="/auth/login">
-              <Button className="bg-primary hover:bg-red-700 text-white font-bold uppercase tracking-widest text-[11px] h-9 px-4">
+              <Button className="bg-primary hover:bg-red-700 text-white font-bold uppercase tracking-widest text-control h-9 px-4">
                 Login <LogIn size={14} className="ml-2" />
               </Button>
             </Link>
