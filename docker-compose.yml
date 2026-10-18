@@ -3,12 +3,14 @@ services:
     image: postgres:16-alpine
     container_name: smart-mechanic-db
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ${DB_USER:?Set DB_USER in .env}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-      POSTGRES_DB: ${DB_NAME:?Set DB_NAME in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-smartmechanic}
     ports:
-      - "127.0.0.1:${DB_PORT:-5432}:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,6 +25,8 @@ services:
     container_name: smart-mechanic-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -30,6 +34,22 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    container_name: smart-mechanic-migrate
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      # Directs Prisma to the internal 'db' container
+      DATABASE_URL: ${INTERNAL_DATABASE_URL:?Set INTERNAL_DATABASE_URL in .env}
+    depends_on:
+      db:
+        condition: service_healthy
 
   app:
     build:
@@ -39,23 +59,16 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
       PORT: "3001"
       NEXT_TELEMETRY_DISABLED: "1"
-      DATABASE_URL: "postgresql://${DB_USER:?Set DB_USER in .env}:${DB_PASSWORD:?Set DB_PASSWORD in .env}@db:5432/${DB_NAME:?Set DB_NAME in .env}?schema=public"
+      # Points to internal container network for db and redis
+      DATABASE_URL: ${INTERNAL_DATABASE_URL:?Set INTERNAL_DATABASE_URL in .env}
       REDIS_URL: redis://redis:6379/0
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET in .env}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3001}
-      MAIL_SERVER: ${MAIL_SERVER:?Set MAIL_SERVER in .env}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME:?Set MAIL_USERNAME in .env}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}
-      MAIL_FROM: ${MAIL_FROM:-}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Smart Mechanic}
-      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:?Set a Razorpay test key in .env}
-      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:?Set Razorpay test secret in .env}
     depends_on:
       db:
         condition: service_healthy
@@ -63,19 +76,6 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: migrator
-    container_name: smart-mechanic-migrate
-    restart: "no"
-    environment:
-      DATABASE_URL: "postgresql://${DB_USER:?Set DB_USER in .env}:${DB_PASSWORD:?Set DB_PASSWORD in .env}@db:5432/${DB_NAME:?Set DB_NAME in .env}?schema=public"
-    depends_on:
-      db:
-        condition: service_healthy
 
 volumes:
   postgres_data:

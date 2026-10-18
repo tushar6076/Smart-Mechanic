@@ -34,7 +34,7 @@ The command creates an admin only if the email is unused. If it already belongs 
 
 ## Docker Compose
 
-Copy `.env.example` to `.env`, set strong URL-safe values for `DB_USER` and `DB_PASSWORD`, and provide the required session, Titan SMTP, and Razorpay test-mode settings. Then run:
+Copy `.env.example` to `.env`, set the same strong URL-safe password in `POSTGRES_PASSWORD`, `DATABASE_URL`, and `INTERNAL_DATABASE_URL`, and provide the required session, Titan SMTP, and Razorpay test-mode settings. Keep `DATABASE_URL` pointed at `localhost` for host commands and `INTERNAL_DATABASE_URL` pointed at the Compose `db` service. Then run:
 
 ```bash
 docker compose up --build
